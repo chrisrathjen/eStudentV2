@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<model userDefinedModelVersionIdentifier="" type="com.apple.IDECoreDataModeler.DataModel" documentVersion="1.0" lastSavedToolsVersion="3394" systemVersion="12E55" minimumToolsVersion="Xcode 4.3" macOSVersion="Automatic" iOSVersion="Automatic">
+    <entity name="Course" representedClassName="Course" syncable="YES">
+        <attribute name="title" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="url" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="lectures" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Lecture" inverseName="course" inverseEntity="Lecture" syncable="YES"/>
+        <relationship name="semester" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Term" inverseName="courses" inverseEntity="Term" syncable="YES"/>
+    </entity>
+    <entity name="Date" representedClassName="Date" syncable="YES">
+        <attribute name="active" optional="YES" attributeType="Boolean" syncable="YES"/>
+        <attribute name="date" optional="YES" attributeType="Date" syncable="YES"/>
+        <attribute name="note" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="startTime" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="stopTime" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="dateBlock" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="DateBlock" inverseName="dates" inverseEntity="DateBlock" syncable="YES"/>
+        <relationship name="lecture" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Lecture" inverseName="dates" inverseEntity="Lecture" syncable="YES"/>
+    </entity>
+    <entity name="DateBlock" representedClassName="DateBlock" syncable="YES">
+        <attribute name="repeatModifier" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <attribute name="room" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="startDate" optional="YES" attributeType="Date" syncable="YES"/>
+        <attribute name="startTime" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="stopDate" optional="YES" attributeType="Date" syncable="YES"/>
+        <attribute name="stopTime" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="dates" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Date" inverseName="dateBlock" inverseEntity="Date" syncable="YES"/>
+        <relationship name="lecture" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Lecture" inverseName="dateBlocks" inverseEntity="Lecture" syncable="YES"/>
+    </entity>
+    <entity name="Eintrag" representedClassName="Eintrag" syncable="YES">
+        <attribute name="art" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="benotet" optional="YES" attributeType="Boolean" syncable="YES"/>
+        <attribute name="bestanden" optional="YES" attributeType="Boolean" syncable="YES"/>
+        <attribute name="cp" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
+        <attribute name="note" optional="YES" attributeType="Double" defaultValueString="0" syncable="YES"/>
+        <attribute name="titel" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="kriterien" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Kriterium" inverseName="eintrag" inverseEntity="Kriterium" syncable="YES"/>
+        <relationship name="lecture" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Lecture" inverseName="eintrag" inverseEntity="Lecture" syncable="YES"/>
+        <relationship name="semester" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Semester" inverseName="kurse" inverseEntity="Semester" syncable="YES"/>
+        <relationship name="studiengang" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Studiengang" inverseName="eintraege" inverseEntity="Studiengang" syncable="YES"/>
+    </entity>
+    <entity name="Kriterium" representedClassName="Kriterium" syncable="YES">
+        <attribute name="calendarItemIdentifier" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="date" optional="YES" attributeType="Date" syncable="YES"/>
+        <attribute name="erledigt" optional="YES" attributeType="Boolean" syncable="YES"/>
+        <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="eintrag" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Eintrag" inverseName="kriterien" inverseEntity="Eintrag" syncable="YES"/>
+    </entity>
+    <entity name="Lecture" representedClassName="Lecture" syncable="YES">
+        <attribute name="activeInSchedule" optional="YES" attributeType="Boolean" syncable="YES"/>
+        <attribute name="cp" optional="YES" attributeType="Integer 16" defaultValueString="0" syncable="YES"/>
+        <attribute name="createdByUser" optional="YES" attributeType="Boolean" syncable="YES"/>
+        <attribute name="title" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="type" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="vak" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="course" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Course" inverseName="lectures" inverseEntity="Course" syncable="YES"/>
+        <relationship name="dateBlocks" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="DateBlock" inverseName="lecture" inverseEntity="DateBlock" syncable="YES"/>
+        <relationship name="dates" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Date" inverseName="lecture" inverseEntity="Date" syncable="YES"/>
+        <relationship name="eintrag" optional="YES" maxCount="1" deletionRule="Nullify" destinationEntity="Eintrag" inverseName="lecture" inverseEntity="Eintrag" syncable="YES"/>
+        <relationship name="lecturers" optional="YES" toMany="YES" deletionRule="Nullify" ordered="YES" destinationEntity="Lecturer" inverseName="lectures" inverseEntity="Lecturer" syncable="YES"/>
+    </entity>
+    <entity name="Lecturer" representedClassName="Lecturer" syncable="YES">
+        <attribute name="title" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="lectures" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Lecture" inverseName="lecturers" inverseEntity="Lecture" syncable="YES"/>
+    </entity>
+    <entity name="Semester" representedClassName="Semester" syncable="YES">
+        <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="ersteFachSemester" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Studiengang" inverseName="erstesFachsemester" inverseEntity="Studiengang" syncable="YES"/>
+        <relationship name="kurse" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Eintrag" inverseName="semester" inverseEntity="Eintrag" syncable="YES"/>
+        <relationship name="letzteFachSemester" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Studiengang" inverseName="letztesFachsemester" inverseEntity="Studiengang" syncable="YES"/>
+    </entity>
+    <entity name="Studiengang" representedClassName="Studiengang" syncable="YES">
+        <attribute name="abschluss" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="cp" optional="YES" attributeType="Integer 32" defaultValueString="0" syncable="YES"/>
+        <attribute name="name" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="eintraege" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Eintrag" inverseName="studiengang" inverseEntity="Eintrag" syncable="YES"/>
+        <relationship name="erstesFachsemester" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Semester" inverseName="ersteFachSemester" inverseEntity="Semester" syncable="YES"/>
+        <relationship name="letztesFachsemester" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Semester" inverseName="letzteFachSemester" inverseEntity="Semester" syncable="YES"/>
+    </entity>
+    <entity name="Term" representedClassName="Term" syncable="YES">
+        <attribute name="lectureEnd" optional="YES" attributeType="Date" syncable="YES"/>
+        <attribute name="lectureStart" optional="YES" attributeType="Date" syncable="YES"/>
+        <attribute name="termEnd" optional="YES" attributeType="Date" syncable="YES"/>
+        <attribute name="termStart" optional="YES" attributeType="Date" syncable="YES"/>
+        <attribute name="title" optional="YES" attributeType="String" syncable="YES"/>
+        <relationship name="courses" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Course" inverseName="semester" inverseEntity="Course" syncable="YES"/>
+    </entity>
+    <elements>
+        <element name="Course" positionX="-254" positionY="90" width="128" height="103"/>
+        <element name="Date" positionX="108" positionY="315" width="128" height="148"/>
+        <element name="DateBlock" positionX="115" positionY="95" width="128" height="163"/>
+        <element name="Eintrag" positionX="549" positionY="137" width="128" height="193"/>
+        <element name="Kriterium" positionX="547" positionY="378" width="128" height="120"/>
+        <element name="Lecture" positionX="-74" positionY="90" width="128" height="208"/>
+        <element name="Lecturer" positionX="-234" positionY="288" width="128" height="73"/>
+        <element name="Semester" positionX="270" positionY="26" width="128" height="103"/>
+        <element name="Studiengang" positionX="745" positionY="-54" width="128" height="133"/>
+        <element name="Term" positionX="-398" positionY="-52" width="128" height="133"/>
+    </elements>
+</model>
