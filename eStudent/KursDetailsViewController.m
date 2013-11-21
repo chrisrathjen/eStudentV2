@@ -41,11 +41,6 @@
 {
     [super viewDidLoad];
     
-    if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-        self.edgesForExtendedLayout = UIRectEdgeNone;
-    }
-
-    
     _dozenten = [[CoreDataDataManager sharedInstance] getLecturersForLecture:_veranstaltung];
     self.tableView.backgroundView = nil;
     self.tableView.backgroundColor = kCUSTOM_BACKGROUND_PATTERN_COLOR;
@@ -292,8 +287,16 @@
                 [wochentag appendString:@"s"];
             }
             cell.textLabel.text = [NSString stringWithFormat:@"%@ %@ - %@ %@,\n%@", wochentag, db.startTime, db.stopTime, NSLocalizedString(@"Uhr", @"Uhr"), dateRange];
-            if (db.room) {
-                cell.detailTextLabel.text = [NSString stringWithFormat:@"%@: %@", NSLocalizedString(@"Raum", @"Raum"), db.room];
+            if (db.room)
+            {
+                if (db.type)
+                {
+                    cell.detailTextLabel.text = [NSString stringWithFormat:@"%@, %@: %@", db.type, NSLocalizedString(@"Raum", @"Raum"), db.room];
+                }
+                else
+                {
+                    cell.detailTextLabel.text = [NSString stringWithFormat:@"%@: %@", NSLocalizedString(@"Raum", @"Raum"), db.room];
+                }
             }
             
         }
@@ -415,12 +418,12 @@
     {
         return [((Lecturer *)[_dozenten objectAtIndex:indexPath.row]).title sizeWithFont:[UIFont fontWithName:@"HelveticaNeue-Medium" size:16.0] constrainedToSize:CGSizeMake(300.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height + 20.0;
     }
-    else if (indexPath.section == 2)
+    else if (indexPath.section == 2) //DateBlocks
     {
         if (_dateBlocks.count > 0)
         {
             DateBlock *db = [_dateBlocks objectAtIndex:indexPath.row];
-            return [[NSString stringWithFormat:@"%@: %@", NSLocalizedString(@"Raum", @"Raum"), db.room] sizeWithFont:[UIFont fontWithName:@"HelveticaNeue" size:13.0] constrainedToSize:CGSizeMake(260.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height + 50.0;
+            return [[NSString stringWithFormat:@"%@: %@, %@", db.type, NSLocalizedString(@"Raum", @"Raum"), db.room] sizeWithFont:[UIFont fontWithName:@"HelveticaNeue" size:13.0] constrainedToSize:CGSizeMake(260.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height + 50.0;
         }
         return 44.0;
     }
@@ -538,7 +541,11 @@
     }
     else
     {
-        [[CoreDataDataManager sharedInstance] removeLectureFromSchedule:_veranstaltung];
+        NSString *message  = NSLocalizedString(@"Bist du sicher?", @"Bist du sicher?");
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Aus dem Stundenplan austragen?", @"Aus dem Stundenplan austragen?") message:message delegate:self cancelButtonTitle:NSLocalizedString(@"Abbrechen", @"Abbrechen") otherButtonTitles:NSLocalizedString(@"Austragen", @"Austragen"), nil];
+        
+        alertView.tag = 2;
+        [alertView show];
     }
 }
 
@@ -608,25 +615,11 @@
     }
     else
     {
-        imStudiumsplaner = NO;
-        _selectedStudiengang = nil;
-        [[CoreDataDataManager sharedInstance] deleteEintragForLecture:_veranstaltung];
-        if (mehrereStudiengaenge)
-        {
-            NSMutableArray *indexPaths = [NSMutableArray array];
-            for (int i = 0; i < _studiengaenge.count; i++)
-            {
-                if (_dateBlocks.count > 0)
-                {
-                    [indexPaths addObject:[NSIndexPath indexPathForRow:i+2 inSection:3]];
-                }
-                else
-                {
-                    [indexPaths addObject:[NSIndexPath indexPathForRow:i+1 inSection:3]];
-                }
-            }
-            [self.tableView deleteRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
-        }
+        NSString *message  = NSLocalizedString(@"Bist du sicher?", @"Bist du sicher?");
+        UIAlertView *alertView = [[UIAlertView alloc] initWithTitle:NSLocalizedString(@"Aus dem Studiumsplaner austragen?", @"Aus dem Studiumsplaner austragen?") message:message delegate:self cancelButtonTitle:NSLocalizedString(@"Abbrechen", @"Abbrechen") otherButtonTitles:NSLocalizedString(@"Austragen", @"Austragen"), nil];
+        
+        alertView.tag = 1;
+        [alertView show];
     }
 }
 
@@ -662,6 +655,46 @@
     }
     
     return [NSString stringWithString:nextSemester];
+}
+
+#pragma mark - UIAlertViewDelegate
+
+- (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
+{
+    if (buttonIndex == 1 && alertView.tag == 1) //Aus dem Studiumsplaner austragen
+    {
+        imStudiumsplaner = NO;
+        _selectedStudiengang = nil;
+        [[CoreDataDataManager sharedInstance] deleteEintragForLecture:_veranstaltung];
+        if (mehrereStudiengaenge)
+        {
+            NSMutableArray *indexPaths = [NSMutableArray array];
+            for (int i = 0; i < _studiengaenge.count; i++)
+            {
+                if (_dateBlocks.count > 0)
+                {
+                    [indexPaths addObject:[NSIndexPath indexPathForRow:i+2 inSection:3]];
+                }
+                else
+                {
+                    [indexPaths addObject:[NSIndexPath indexPathForRow:i+1 inSection:3]];
+                }
+            }
+            [self.tableView deleteRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
+        }
+    }
+    else if (buttonIndex == 0 && alertView.tag == 1) //Aus dem Studiumsplaner austragen abbrechen
+    {
+        [_zumStudiumsplanerHinzufuegenSwitch setOn:YES animated:YES];
+    }
+    else if (buttonIndex == 1 && alertView.tag == 2) //Aus dem Stundenplan austragen
+    {
+        [[CoreDataDataManager sharedInstance] removeLectureFromSchedule:_veranstaltung];
+    }
+    else //Aus dem Stundenplan austragen abbrechen
+    {
+        [_zumStundenplanHinzufuegenSwitch setOn:YES animated:YES];
+    }
 }
 
 @end

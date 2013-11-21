@@ -16,6 +16,7 @@
                              startDate:(NSDate *)startDate
                               stopDate:(NSDate *)stopDate
                         repeatModifier:(NSNumber *)modifier
+                                  type:(NSString *)type
                                lecture:(Lecture *)aLecture
                       inManagedContext:(NSManagedObjectContext *)context;
 

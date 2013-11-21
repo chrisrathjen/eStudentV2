@@ -85,7 +85,11 @@
 #define kDateBlockLastDate                  @"lastdate"
 #define kDateBlockStartTime                 @"starttime"
 #define kDateBlockStopTime                  @"stoptime"
+#define kDateBlockType                      @"type"
 #define kLastSemesterDataSync               @"lastSemesterSync"
+#define kDateDay                            @"day"
+#define kDateMonth                         @"month"
+#define kDateYear                           @"year"
 #define kTimeIntervalTwoWeek                -1209600.0
 #define kTimeIntervalFourWeek               -2419200.0
 //MensaDataManager

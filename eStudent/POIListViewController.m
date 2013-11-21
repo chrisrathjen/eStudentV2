@@ -35,10 +35,6 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    
-    if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-        self.edgesForExtendedLayout = UIRectEdgeNone;
-    }
 
     self.title = NSLocalizedString(@"Campus", @"Campus");
     UIImage *mapImage = [UIImage imageNamed:@"map"];

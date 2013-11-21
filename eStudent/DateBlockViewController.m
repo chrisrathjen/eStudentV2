@@ -10,6 +10,9 @@
 #import "TMPDate.h"
 #import "TMPDateBlock.h"
 #import "ManuelleVeranstaltungViewController.h"
+#import <QuartzCore/QuartzCore.h>
+#import "CoreDataDataManager.h"
+#import "Term.h"
 
 @interface DateBlockViewController ()
 {
@@ -28,6 +31,7 @@
     UIButton *_deleteEintragButton;
     CAGradientLayer *_gradient;
     UIActionSheet *actionSheet;
+    Term *_term;
 }
 
 - (void)cancel:(id)sender;
@@ -54,6 +58,8 @@
 {
     [super viewDidLoad];
     
+    _term = [[CoreDataDataManager sharedInstance] existingTermWithTitle:_semester];
+    
     self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Abbrechen", @"Abbrechen") style:UIBarButtonItemStyleBordered target:self action:@selector(cancel:)];
 
     self.tableView.backgroundView = nil;
@@ -69,7 +75,10 @@
         _room = _dateBlock.room;
         
         TMPDate *date = [_dateBlock.dates objectAtIndex:0];
+        _startTime = date.startTime;
+        _endTime = date.stopTime;
         _date = date.date;
+        
         for (int i = 1; i < _dateBlock.dates.count; i++)
         {
             date = [_dateBlock.dates objectAtIndex:i];
@@ -81,8 +90,6 @@
         }
         _numberOfDates = _dateBlock.dates.count;
         _indexOfSegmentedControl = [_dateBlock.repeatModifier intValue];
-        
-
         
         _deleteEintragButton = [[UIButton alloc] initWithFrame:CGRectMake(10.0, 0.0, 300.0, 44.0)];
         _deleteEintragButton.backgroundColor = [UIColor redColor];
@@ -116,15 +123,28 @@
     }
     else
     {
+        _indexOfSegmentedControl = 1;
         self.navigationItem.title = NSLocalizedString(@"Termine Anlegen", @"Termine Anlegen");
         self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Anlegen", @"Anlegen") style:UIBarButtonItemStyleBordered target:self action:@selector(saveDateBlock:)];
         
         _date = [NSDate date];
-        [_dates addObject:[self dateFromDate:_date ForDays:1]];
-        [_dates addObject:[self dateFromDate:_date ForDays:2]];
-        [_chosenDates addObject:[self dateFromDate:_date ForDays:1]];
-        [_chosenDates addObject:[self dateFromDate:_date ForDays:2]];
-        _numberOfDates = 3;
+        _numberOfDates = 1;
+        NSDate *dateIterator = [self dateFromDate:_date ForDays:7];
+        
+        NSDate *semesterEnd = _term.lectureEnd;
+        if (semesterEnd)
+        {
+            while ([dateIterator compare:semesterEnd] != NSOrderedDescending)
+            {
+                [_dates addObject:dateIterator];
+                [_chosenDates addObject:dateIterator];
+                _numberOfDates++;
+                dateIterator = [self dateFromDate:dateIterator ForDays:7];
+            }
+        }
+        
+        _startTime = [self startTimeForDate:_date];
+        _endTime = [self stopTimeForDate:_date];
     }
     
     NSDateFormatter *dateFormatter = [[NSDateFormatter alloc] init];
@@ -154,9 +174,6 @@
             _date = _semesterStart;
         }
     }
-    
-    _startTime = [self startTimeForDate:_date];
-    _endTime = [self stopTimeForDate:_date];
 }
 
 - (void)dealloc
@@ -202,6 +219,7 @@
                 
                 [((ManuelleVeranstaltungViewController *)[((UINavigationController *)self.presentingViewController).viewControllers lastObject]) addDates:[NSArray arrayWithObject:date] ToDateBlock:_dateBlock];
             }
+            ((ManuelleVeranstaltungViewController *)[((UINavigationController *)self.presentingViewController).viewControllers lastObject]).inDenStundenplan = YES;
         }
         else
         {
@@ -211,7 +229,7 @@
             date.startTime = _startTime;
             date.stopTime = _endTime;
             date.active = [_chosenDates containsObject:_date] ? [NSNumber numberWithBool:YES] : [NSNumber numberWithBool:NO];
-            dateBlock.dates = [NSArray arrayWithObject:date].mutableCopy;
+            dateBlock.dates = ((NSArray *)[NSArray arrayWithObject:date]).mutableCopy;
             [((ManuelleVeranstaltungViewController *)[((UINavigationController *)self.presentingViewController).viewControllers lastObject]) addDateBlock:dateBlock];
             
             for (NSDate *d in _dates)
@@ -222,10 +240,10 @@
                 date.startTime = _startTime;
                 date.stopTime = _endTime;
                 date.active = [_chosenDates containsObject:d] ? [NSNumber numberWithBool:YES] : [NSNumber numberWithBool:NO];
-                dateBlock.dates = [NSArray arrayWithObject:date].mutableCopy;
+                dateBlock.dates = ((NSArray *)[NSArray arrayWithObject:date]).mutableCopy;
                 [((ManuelleVeranstaltungViewController *)[((UINavigationController *)self.presentingViewController).viewControllers lastObject]) addDateBlock:dateBlock];
             }
-            
+            ((ManuelleVeranstaltungViewController *)[((UINavigationController *)self.presentingViewController).viewControllers lastObject]).inDenStundenplan = YES;
         }
     }
     else
@@ -257,6 +275,7 @@
             }
             
             [((ManuelleVeranstaltungViewController *)[((UINavigationController *)self.presentingViewController).viewControllers lastObject]) addDates:dates ToDateBlock:_dateBlock];
+            ((ManuelleVeranstaltungViewController *)[((UINavigationController *)self.presentingViewController).viewControllers lastObject]).inDenStundenplan = YES;
         }
         else
         {
@@ -281,6 +300,7 @@
             dateBlock.dates = dates;
             
             [((ManuelleVeranstaltungViewController *)[((UINavigationController *)self.presentingViewController).viewControllers lastObject]) addDateBlock:dateBlock];
+            ((ManuelleVeranstaltungViewController *)[((UINavigationController *)self.presentingViewController).viewControllers lastObject]).inDenStundenplan = YES;;
         }
     }
     
@@ -587,57 +607,61 @@
     
     if (sender.selectedSegmentIndex == 0)//Einzeltermin ist gewählt
     {
-        for (int i = 0; i < _dates.count; i++)
-        {
-            NSDate *date = [_dates objectAtIndex:i];
-            [_dates removeObjectAtIndex:i];
-            NSDate *newDate = [self dateFromDate:_date ForDays:i+1];
-            [_dates insertObject:newDate atIndex:i];
-            if ([_chosenDates containsObject:date])
-            {
-                int index = [_chosenDates indexOfObject:date];
-                [_chosenDates removeObjectAtIndex:index];
-                [_chosenDates insertObject:newDate atIndex:index];
-            }
-        }
+        _dates = nil;
+        _dates = [NSMutableArray array];
+        _chosenDates = nil;
+        _chosenDates = [NSMutableArray array];
+        _numberOfDates = 1;
+        [self.tableView reloadData];
     }
     else if (sender.selectedSegmentIndex == 1)//Wöchentlich ist gewählt
     {
-        for (int i = 0; i < _dates.count; i++)
+        
+        _dates = nil;
+        _dates = [NSMutableArray array];
+        _chosenDates = nil;
+        _chosenDates = [NSMutableArray array];
+        _numberOfDates = 1;
+        
+        NSDate *dateIterator = [self dateFromDate:_date ForDays:7];
+        
+        NSDate *semesterEnd = _term.lectureEnd;
+        if (semesterEnd)
         {
-            NSDate *date = [_dates objectAtIndex:i];
-            [_dates removeObjectAtIndex:i];
-            NSDate *newDate = [self dateFromDate:_date ForDays:(i+1)*7];
-            [_dates insertObject:newDate atIndex:i];
-            if ([_chosenDates containsObject:date])
+            while ([dateIterator compare:semesterEnd] != NSOrderedDescending)
             {
-                int index = [_chosenDates indexOfObject:date];
-                [_chosenDates removeObjectAtIndex:index];
-                [_chosenDates insertObject:newDate atIndex:index];
+                [_dates addObject:dateIterator];
+                [_chosenDates addObject:dateIterator];
+                _numberOfDates++;
+                dateIterator = [self dateFromDate:dateIterator ForDays:7];
             }
         }
+        [self.tableView reloadData];
     }
     else //Zweiwöchentlich ist gewählt
     {
         
-        for (int i = 0; i < _dates.count; i++)
+        _dates = nil;
+        _dates = [NSMutableArray array];
+        _chosenDates = nil;
+        _chosenDates = [NSMutableArray array];
+        _numberOfDates = 1;
+        
+        NSDate *dateIterator = [self dateFromDate:_date ForDays:14];
+        
+        NSDate *semesterEnd = _term.lectureEnd;
+        if (semesterEnd)
         {
-            NSDate *date = [_dates objectAtIndex:i];
-            [_dates removeObjectAtIndex:i];
-            NSDate *newDate = [self dateFromDate:_date ForDays:(i+1)*14];
-            [_dates insertObject:newDate atIndex:i];
-            if ([_chosenDates containsObject:date])
+            while ([dateIterator compare:semesterEnd] != NSOrderedDescending)
             {
-                int index = [_chosenDates indexOfObject:date];
-                [_chosenDates removeObjectAtIndex:index];
-                [_chosenDates insertObject:newDate atIndex:index];
+                [_dates addObject:dateIterator];
+                [_chosenDates addObject:dateIterator];
+                _numberOfDates++;
+                dateIterator = [self dateFromDate:dateIterator ForDays:14];
             }
         }
+        [self.tableView reloadData];
     }
-    
-    [self.tableView beginUpdates];
-    [self.tableView reloadSections:[NSIndexSet indexSetWithIndex:2] withRowAnimation:UITableViewRowAnimationFade];
-    [self.tableView endUpdates];
 }
 
 #pragma mark - UIStepper Value Changed
@@ -747,7 +771,6 @@
     [df setDateFormat:@"HH:mm"];
     NSArray *array = [_startTime componentsSeparatedByString:@" "];
     _datePicker.date = [df dateFromString:[array objectAtIndex:0]];
-    NSLog(@"DatePicker.date: %@", _datePicker.date);
     _datePicker.tag = 3;
     
     UISegmentedControl *closeButton = [[UISegmentedControl alloc] initWithItems:[NSArray arrayWithObject:NSLocalizedString(@"Fertig", @"Fertig")]];
@@ -873,8 +896,8 @@
         [df setDateStyle:NSDateFormatterNoStyle];
         [df setDateFormat:@"HH:mm"];
         NSString *startTime = [df stringFromDate:date];
-        _startTime = [NSString stringWithFormat:@"%@ %@", startTime, NSLocalizedString(@"Uhr", @"Uhr")];
-        _endTime = [NSString stringWithFormat:@"%@ %@", [df stringFromDate:[[df dateFromString:startTime] dateByAddingTimeInterval:7200]], NSLocalizedString(@"Uhr", @"Uhr")];
+        _startTime = [NSString stringWithFormat:@"%@", startTime];
+        _endTime = [NSString stringWithFormat:@"%@", [df stringFromDate:[[df dateFromString:startTime] dateByAddingTimeInterval:7200]]];
         
         [self.tableView beginUpdates];
         [self.tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:0 inSection:3]] withRowAnimation:UITableViewRowAnimationFade];
@@ -889,12 +912,12 @@
         [df setDateStyle:NSDateFormatterNoStyle];
         [df setDateFormat:@"HH:mm"];
         NSString *endTime = [df stringFromDate:date];
-        _endTime = [NSString stringWithFormat:@"%@ %@", endTime, NSLocalizedString(@"Uhr", @"Uhr")];
+        _endTime = [NSString stringWithFormat:@"%@", endTime];
         
         NSString *startTime = [[_startTime componentsSeparatedByString:@" "] objectAtIndex:0];
         if ([[df dateFromString:startTime] compare:[df dateFromString:endTime]] == NSOrderedDescending || [[df dateFromString:startTime] compare:[df dateFromString:endTime]] == NSOrderedSame)
         {
-            _startTime = [NSString stringWithFormat:@"%@ %@", [df stringFromDate:[[df dateFromString:endTime] dateByAddingTimeInterval:-3600]], NSLocalizedString(@"Uhr", @"Uhr")];
+            _startTime = [NSString stringWithFormat:@"%@", [df stringFromDate:[[df dateFromString:endTime] dateByAddingTimeInterval:-3600]]];
         }
         
         [self.tableView beginUpdates];

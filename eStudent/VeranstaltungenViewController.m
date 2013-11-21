@@ -82,10 +82,6 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-        self.edgesForExtendedLayout = UIRectEdgeNone;
-    }
-
     
     self.view.backgroundColor = kCUSTOM_BACKGROUND_PATTERN_COLOR;
     _dateLabelDate = [NSDate date];
@@ -150,12 +146,6 @@
     _shouldScroll = YES;
     
     [self setDateLabelFromDate:_dateLabelDate];
-}
-
-- (void)didReceiveMemoryWarning
-{
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
 }
 
 #pragma mark - LoadViews

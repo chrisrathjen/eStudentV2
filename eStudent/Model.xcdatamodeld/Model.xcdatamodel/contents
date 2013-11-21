@@ -8,10 +8,12 @@
     </entity>
     <entity name="Date" representedClassName="Date" syncable="YES">
         <attribute name="active" optional="YES" attributeType="Boolean" syncable="YES"/>
-        <attribute name="date" optional="YES" attributeType="Date" syncable="YES"/>
+        <attribute name="day" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="month" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="note" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="startTime" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="stopTime" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="year" optional="YES" attributeType="String" syncable="YES"/>
         <relationship name="dateBlock" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="DateBlock" inverseName="dates" inverseEntity="DateBlock" syncable="YES"/>
         <relationship name="lecture" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Lecture" inverseName="dates" inverseEntity="Lecture" syncable="YES"/>
     </entity>
@@ -22,6 +24,7 @@
         <attribute name="startTime" optional="YES" attributeType="String" syncable="YES"/>
         <attribute name="stopDate" optional="YES" attributeType="Date" syncable="YES"/>
         <attribute name="stopTime" optional="YES" attributeType="String" syncable="YES"/>
+        <attribute name="type" optional="YES" attributeType="String" syncable="YES"/>
         <relationship name="dates" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Date" inverseName="dateBlock" inverseEntity="Date" syncable="YES"/>
         <relationship name="lecture" optional="YES" minCount="1" maxCount="1" deletionRule="Nullify" destinationEntity="Lecture" inverseName="dateBlocks" inverseEntity="Lecture" syncable="YES"/>
     </entity>
@@ -84,15 +87,15 @@
         <relationship name="courses" optional="YES" toMany="YES" deletionRule="Nullify" destinationEntity="Course" inverseName="semester" inverseEntity="Course" syncable="YES"/>
     </entity>
     <elements>
-        <element name="Course" positionX="-254" positionY="90" width="128" height="103"/>
-        <element name="Date" positionX="108" positionY="315" width="128" height="148"/>
-        <element name="DateBlock" positionX="115" positionY="95" width="128" height="163"/>
-        <element name="Eintrag" positionX="549" positionY="137" width="128" height="193"/>
-        <element name="Kriterium" positionX="547" positionY="378" width="128" height="120"/>
-        <element name="Lecture" positionX="-74" positionY="90" width="128" height="208"/>
-        <element name="Lecturer" positionX="-234" positionY="288" width="128" height="73"/>
-        <element name="Semester" positionX="270" positionY="26" width="128" height="103"/>
-        <element name="Studiengang" positionX="745" positionY="-54" width="128" height="133"/>
-        <element name="Term" positionX="-398" positionY="-52" width="128" height="133"/>
+        <element name="Course" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Date" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="DateBlock" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Eintrag" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Kriterium" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Lecture" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Lecturer" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Semester" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Studiengang" positionX="0" positionY="0" width="0" height="0"/>
+        <element name="Term" positionX="0" positionY="0" width="0" height="0"/>
     </elements>
 </model>

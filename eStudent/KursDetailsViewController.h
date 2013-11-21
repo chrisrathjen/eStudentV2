@@ -10,7 +10,7 @@
 #import "Lecture.h"
 
 //Zeigt dem Nutzer die Details zu einer Veranstaltung an.
-@interface KursDetailsViewController : UITableViewController
+@interface KursDetailsViewController : UITableViewController <UIAlertViewDelegate>
 
 @property (nonatomic,strong)Lecture *veranstaltung; //Die gewählte Veranstaltung.
 

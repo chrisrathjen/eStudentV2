@@ -30,6 +30,12 @@
     _semester = [[CoreDataDataManager sharedInstance] getAllTermsFromCoreData].copy;
 }
 
+- (void)updateData
+{
+    _semester = [[CoreDataDataManager sharedInstance] getAllTermsFromCoreData].copy;
+    [self.tableView reloadData];
+}
+
 #pragma mark - Table view data source
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView

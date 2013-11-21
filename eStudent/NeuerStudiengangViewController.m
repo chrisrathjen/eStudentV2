@@ -9,6 +9,7 @@
 #import "NeuerStudiengangViewController.h"
 #import "ErstesFachsemesterAuswahlViewController.h"
 #import "CoreDataDataManager.h"
+#import <QuartzCore/QuartzCore.h>
 
 @interface NeuerStudiengangViewController ()
 {
@@ -47,10 +48,6 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    
-    if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-        self.edgesForExtendedLayout = UIRectEdgeNone;
-    }
     
     self.navigationItem.title = NSLocalizedString(@"Neuer Studiengang", @"Neuer Studiengang");
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Weiter", @"Weiter") style:UIBarButtonItemStylePlain target:self action:@selector(weiter:)];

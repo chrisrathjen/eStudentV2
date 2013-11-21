@@ -58,9 +58,9 @@
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-        self.edgesForExtendedLayout = UIRectEdgeNone;
-    }
+    //if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
+      //  self.edgesForExtendedLayout = UIRectEdgeNone;
+    //}
 
     
     currentDateToShow = [NSDate date];
@@ -284,13 +284,15 @@
         frame.size.height = labelSize.height;
         label.frame = frame;
         
-        UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(20.0, (frame.size.height + frame.origin.y), 260.0, 50.0)];
-        textView.font = [UIFont fontWithName:@"HelveticaNeue-Medium" size:16.0];
-        textView.textColor = [UIColor colorWithRed:.17 green:.345 blue:.52 alpha:1.0];
-        textView.scrollEnabled = NO;
-        textView.editable = NO;
-        
-        textView.text = food.foodDescription;
+        UILabel *essensBeschreibung = [[UILabel alloc] initWithFrame:CGRectMake(25.0, (frame.size.height + frame.origin.y + 5.0), 255.0, 50.0)];
+        essensBeschreibung.font = [UIFont fontWithName:@"HelveticaNeue-Medium" size:16.0];
+        essensBeschreibung.textColor = [UIColor colorWithRed:.17 green:.345 blue:.52 alpha:1.0];
+        essensBeschreibung.lineBreakMode = NSLineBreakByWordWrapping;
+        essensBeschreibung.numberOfLines = 0;
+        essensBeschreibung.text = food.foodDescription;
+        frame = essensBeschreibung.frame;
+        frame.size.height = [essensBeschreibung.text sizeWithFont:essensBeschreibung.font constrainedToSize:CGSizeMake(255.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height;
+        essensBeschreibung.frame = frame;
         
         UIView *view = [[UIView alloc] initWithFrame:CGRectMake(10.0, yOffset, (self.view.frame.size.width - 20.0), 100.0)];
         view.layer.cornerRadius = 5.0;
@@ -304,34 +306,26 @@
         
         //[view addSubview:imageView];
         [view addSubview:label];
-        [view addSubview:textView];
-        //die Anpassung der Höhe des TextViews kann erst geschehen, nachdem dieser dem View hinzugefügt wurde, ansonsten funktioniert die Anpassung nicht
-        if (SYSTEM_VERSION_LESS_THAN(@"7.0")) {
-            textView.frame = CGRectMake(textView.frame.origin.x, textView.frame.origin.y, textView.frame.size.width, textView.contentSize.height); //Alte Version
-        } else {
-            [textView sizeToFit]; //Ab iOS7
-        }
+        [view addSubview:essensBeschreibung];
         
-        
-        
-        
-        frame = textView.frame;
-        UILabel *priceLabel = [[UILabel alloc] initWithFrame:CGRectMake(frame.origin.x + 8.0, (frame.origin.y + frame.size.height + 5.0), frame.size.width, 20.0)];
+        frame = essensBeschreibung.frame;
+        UILabel *priceLabel = [[UILabel alloc] initWithFrame:CGRectMake(frame.origin.x, (frame.origin.y + frame.size.height + 15.0), frame.size.width, 20.0)];
         if (food.studentPrice && food.staffPrice)
         {
             priceLabel.text = [NSString stringWithFormat:@"%@: %@€,  %@: %@€", NSLocalizedString(@"Studenten", @"Studenten"), food.studentPrice, NSLocalizedString(@"Mitarbeiter", @"Mitarbeiter"), food.staffPrice];
         }
         priceLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:12.0];
+        priceLabel.numberOfLines = 0;
         [priceLabel sizeToFit];
         
         UILabel *foodTypeLabel;
         if (food.types.count > 0 && priceLabel.text)
         {
-            foodTypeLabel = [[UILabel alloc] initWithFrame:CGRectMake(-1.0, (frame.origin.y + frame.size.height + 33.0), 302.0, 18.0)];
+            foodTypeLabel = [[UILabel alloc] initWithFrame:CGRectMake(-1.0, (frame.origin.y + frame.size.height + 38.0), 302.0, 18.0)];
         }
         else
         {
-            foodTypeLabel = [[UILabel alloc] initWithFrame:CGRectMake(-1.0, (frame.origin.y + frame.size.height + 17.0), 302.0, 18.0)];
+            foodTypeLabel = [[UILabel alloc] initWithFrame:CGRectMake(-1.0, (frame.origin.y + frame.size.height + 22.0), 302.0, 18.0)];
         }
         foodTypeLabel.textAlignment = NSTextAlignmentCenter;
         foodTypeLabel.font = [UIFont fontWithName:@"HelveticaNeue-Medium" size:14.0];
@@ -456,15 +450,15 @@
         float viewHeight;
         if (food.types.count > 0)
         {
-             viewHeight = priceLabel.frame.origin.y + priceLabel.frame.size.height + 30.0;
+             viewHeight = priceLabel.frame.origin.y + priceLabel.frame.size.height + 25.0;
         }
         else if (priceLabel.text)
         {
-            viewHeight = priceLabel.frame.origin.y + priceLabel.frame.size.height + 15.0;
+            viewHeight = priceLabel.frame.origin.y + priceLabel.frame.size.height + 10.0;
         }
         else
         {
-            viewHeight = priceLabel.frame.origin.y + priceLabel.frame.size.height + 5.0;
+            viewHeight = priceLabel.frame.origin.y + priceLabel.frame.size.height -5.0;
         }
         
         view.frame = CGRectMake(view.frame.origin.x, yOffset, view.frame.size.width, viewHeight);

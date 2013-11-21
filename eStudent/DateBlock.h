@@ -2,7 +2,7 @@
 //  DateBlock.h
 //  estudent
 //
-//  Created by Christian Rathjen on 22/9/13.
+//  Created by Christian Rathjen on 1/10/13.
 //  Copyright (c) 2013 eStudent. All rights reserved.
 //
 
@@ -19,6 +19,7 @@
 @property (nonatomic, retain) NSString * startTime;
 @property (nonatomic, retain) NSDate * stopDate;
 @property (nonatomic, retain) NSString * stopTime;
+@property (nonatomic, retain) NSString * type;
 @property (nonatomic, retain) NSSet *dates;
 @property (nonatomic, retain) Lecture *lecture;
 @end

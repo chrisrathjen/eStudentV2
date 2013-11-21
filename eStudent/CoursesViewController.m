@@ -21,6 +21,7 @@
     NSMutableArray *_sectionHeader;
     NSMutableArray *_sectionHeaderToDisplay;
     NSArray *_belegteVeranstaltungen;
+    UIView *_emptyState;
 }
 
 @end
@@ -61,9 +62,6 @@
 {
     [super viewDidLoad];
     self.navigationController.view.backgroundColor = [UIColor whiteColor];
-    if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-        self.edgesForExtendedLayout = UIRectEdgeNone;
-    }
 
     //self.navigationItem.title = [NSString stringWithFormat:@"%@, %@", self.navigationItem.title, _studiengang.semester.title];
     CoreDataDataManager *cdm = [CoreDataDataManager sharedInstance];
@@ -101,7 +99,37 @@
         else
         {
             [SVProgressHUD dismiss];
-#warning Hier muss die GUI noch den Zustand repraesentieren, wenn keine Daten vorhanden sind.
+            _searchBar.hidden = YES;
+            self.view.backgroundColor = kCUSTOM_BACKGROUND_PATTERN_COLOR;
+            _tableView.backgroundColor = kCUSTOM_BACKGROUND_PATTERN_COLOR;
+            _tableView.backgroundView = nil;
+            _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+            _sectionHeaderToDisplay = nil;
+            _veranstaltungenToDisplay = nil;
+            [_tableView reloadData];
+            
+            if (!_emptyState)
+            {
+                CGRect frame = self.view.frame;
+                _emptyState = [[UIView alloc] initWithFrame:frame];
+                UIImageView *emptySemester = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"studiumsplaner-empty"]];
+                frame = emptySemester.frame;
+                frame.origin.x = (_emptyState.frame.size.width / 2.0) - (frame.size.width / 2.0);
+                frame.origin.y = (_emptyState.frame.size.height / 2.0) - (frame.size.height);
+                emptySemester.frame = frame;
+                [_emptyState addSubview:emptySemester];
+                
+                UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(30.0, frame.origin.y + frame.size.height + 10.0, 260.0, 150.0)];
+                textView.text = NSLocalizedString(@"Die Veranstaltungen konnten nicht geladen werden. Prüfe deine Internetverbindung und versuche es noch einmal.", @"Die Veranstaltungen konnten nicht geladen werden. Prüfe deine Internetverbindung und versuche es noch einmal.");
+                textView.scrollEnabled = NO;
+                textView.editable = NO;
+                textView.textAlignment = NSTextAlignmentCenter;
+                textView.font = [UIFont fontWithName:@"HelveticaNeue" size:18.0];
+                textView.textColor = [UIColor colorWithRed:.75 green:.75 blue:.75 alpha:1.0];
+                textView.backgroundColor = [UIColor clearColor];
+                [_emptyState addSubview:textView];
+            }
+            [self.view addSubview:_emptyState];
         }
     }];
 }

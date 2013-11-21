@@ -38,10 +38,6 @@
 {
     [super viewDidLoad];
     
-    if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-        self.edgesForExtendedLayout = UIRectEdgeNone;
-    }
-    
     self.navigationItem.title = NSLocalizedString(@"Erstes Fachsemester", @"Erstes Fachsemester");//[NSString stringWithFormat:@"%@, %@", studiengangName, abschlussArt];
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Anlegen", @"Anlegen") style:UIBarButtonItemStylePlain target:self action:@selector(anlegen:)];
     [self.navigationItem.rightBarButtonItem setEnabled:NO];

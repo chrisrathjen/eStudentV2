@@ -107,6 +107,7 @@ typedef void (^LecturesForCourseRequestCompleteBlock) (BOOL wasSuccessful, NSArr
 - (NSArray *)getDatesForLecture:(Lecture *)aLecture;
 - (NSArray *)getDatesForDateBlock:(DateBlock *)aDateBlock;
 - (void)addLecturerToLecture:(Lecture *)aLecture fromArray:(NSArray *)anArray;
+- (Term *)existingTermWithTitle:(NSString *)title;
 
 #pragma mark - Stundenplan
 - (NSArray *)getAllActiveLectures;

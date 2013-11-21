@@ -82,15 +82,13 @@
     {
         [self refreshMensaData];
     }
+    [self refreshLectureLiveTile];
 }
 
 //Lädt die Instanzen für die vier Felder und den Mensa-Datenmanager.
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-//    if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-//        self.edgesForExtendedLayout = UIRectEdgeNone;
-//    }
     
     // EssenCell
     UINib *essenCell = [UINib nibWithNibName:@"HomeScreenEssenCell" bundle:nil];
@@ -120,6 +118,11 @@
     }
 }
 
+- (void)refreshLectureLiveTile
+{
+    [self.tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:1 inSection:0]] withRowAnimation:UITableViewRowAnimationNone];
+}
+
 #pragma mark - UITableViewDataSource
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section
@@ -135,7 +138,6 @@
         HomeScreenEssenCell *cell = [tableView dequeueReusableCellWithIdentifier:@"HomeScreenEssenCell"];
         cell.essenFunktionLabel.text = NSLocalizedString(@"Essen", @"Essen");
         cell.essensTypLabel.textColor = customBlueColor;
-        cell.essensBeschreibungsTextView.textColor = customBlueColor;
         
         if ([[NSUserDefaults standardUserDefaults] objectForKey:kDEFAULTS_MENSA_NAME])
         {
@@ -144,28 +146,24 @@
                 if (foodEntry && !noDataToParse && !noNetworkConnection)
                 {
                     [cell.activitiyIndicator stopAnimating];
-                    cell.essensTypLabel.text = [NSString stringWithFormat:@"%@ %@:", NSLocalizedString(@"Heute bei", @"Heute bei"), foodEntry.name];
-                    cell.essensBeschreibungsTextView.text = foodEntry.foodDescription;
+                    cell.essensTypLabel.text = [NSString stringWithFormat:@"%@ %@:\n%@", NSLocalizedString(@"Heute bei", @"Heute bei"), foodEntry.name, foodEntry.foodDescription];
                     
                 }
                 else if (noDataToParse)
                 {
                     [cell.activitiyIndicator stopAnimating];
                     cell.essensTypLabel.text = NSLocalizedString(@"Momentan liegen keine Daten für das gewählte Essen vor.", @"Momentan liegen keine Daten für das gewählte Essen vor.");
-                    cell.essensBeschreibungsTextView.text = @"";
                 }
                 else if (noNetworkConnection)
                 {
                     [cell.activitiyIndicator stopAnimating];
                     cell.essensTypLabel.text = NSLocalizedString(@"Verbindungsprobleme. Bitte versuche es später noch mal.", @"Verbindungsprobleme. Bitte versuche es später noch mal.");
-                    cell.essensBeschreibungsTextView.text = @"";
                 }
             }
             else
             {
                 [cell.activitiyIndicator stopAnimating];
                 cell.essensTypLabel.text = NSLocalizedString(@"Alle Mensen haben am Wochenende geschlossen.", @"Alle Mensen haben am Wochenende geschlossen.");
-                cell.essensBeschreibungsTextView.text = @"";
                 cell.accessoryType = UITableViewCellAccessoryNone;
                 [cell setSelectionStyle:UITableViewCellSelectionStyleNone];
             }
@@ -173,24 +171,14 @@
         else
         {
             cell.essensTypLabel.text = NSLocalizedString(@"Speisepläne der Bremer Mensen", @"Speisepläne der Bremer Mensen");
-            cell.essensTypLabel.font = [UIFont fontWithName:@"HelveticaNeue-Medium" size:16.0];
         }
         
         cell.essensTypLabel.lineBreakMode = NSLineBreakByWordWrapping;
         cell.essensTypLabel.numberOfLines = 0;
-        [cell.essensTypLabel sizeToFit];
-#warning uncomment for iOS7 only
-        //[cell.essensBeschreibungsTextView.layoutManager ensureLayoutForTextContainer:cell.essensBeschreibungsTextView.textContainer];
-        //[cell.essensBeschreibungsTextView layoutIfNeeded];
         
-        CGRect frame = cell.essensBeschreibungsTextView.frame;
-        frame.size.height = cell.essensBeschreibungsTextView.contentSize.height;
-        frame.origin.y = (cell.essensTypLabel.frame.origin.y + cell.essensTypLabel.frame.size.height - 5.0);
-        cell.essensBeschreibungsTextView.frame = frame;
-        
-       // [cell.essensBeschreibungsTextView sizeToFit];
-        
-        
+        CGRect frame = cell.essensTypLabel.frame;
+        frame.size.height = [cell.essensTypLabel.text sizeWithFont:cell.essensTypLabel.font constrainedToSize:CGSizeMake(262.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height;
+        cell.essensTypLabel.frame = frame;
         
         UISwipeGestureRecognizer *sgrLeft = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(swipedLeft:)];
         sgrLeft.direction = UISwipeGestureRecognizerDirectionLeft;
@@ -206,19 +194,73 @@
         //UIColor *customBlueColor = [UIColor colorWithRed:.17 green:.345 blue:.52 alpha:1.0];
         HomeScreenVeranstaltungenCell  *cell = [tableView dequeueReusableCellWithIdentifier:@"HomeScreenVeranstaltungenCell"];
         cell.veranstaltungenFunktionLabel.text = NSLocalizedString(@"Veranstaltungen", @"Veranstaltungen");
-        [cell.veranstaltungsBeschreibungsTextView removeFromSuperview];
-        /*cell.veranstaltungsTitelLabel.textColor = customBlueColor;
-        cell.veranstaltungsBeschreibungsTextView.textColor = customBlueColor;
-        
-        cell.veranstaltungsTitelLabel.lineBreakMode = UILineBreakModeWordWrap;
+        cell.veranstaltungsTitelLabel.textColor = customBlueColor;
+        cell.veranstaltungsTitelLabel.lineBreakMode = NSLineBreakByWordWrapping;
         cell.veranstaltungsTitelLabel.numberOfLines = 0;
-        [cell.veranstaltungsTitelLabel sizeToFit];
         
-        CGRect frame = cell.veranstaltungsBeschreibungsTextView.frame;
-        frame.size.height = cell.veranstaltungsBeschreibungsTextView.contentSize.height;
-        frame.origin.y = (cell.veranstaltungsTitelLabel.frame.origin.y + cell.veranstaltungsTitelLabel.frame.size.height - 5.0);
-        cell.veranstaltungsBeschreibungsTextView.frame = frame;
-        */
+        if ([[CoreDataDataManager sharedInstance] getAllActiveLectures].count > 0) //Es gibt mindestens eine Veranstaltung in die der Nutzer sich eingetragen hat
+        {
+            NSArray *veranstaltungenHeute = [[CoreDataDataManager sharedInstance] getAllActiveDatesForDate:[NSDate date]];
+            if (veranstaltungenHeute.count > 0) //Heute hat der Nutzer mindestens eine Veranstaltung
+            {
+                NSCalendar *calendar = [NSCalendar currentCalendar];
+                NSDateComponents *components = [calendar components:(NSHourCalendarUnit | NSMinuteCalendarUnit) fromDate:[NSDate date]];
+                NSInteger hour = [components hour];
+                NSInteger minute = [components minute];
+                NSString *time = [NSString stringWithFormat:@"%i:%i", hour, minute];
+                if ([self compareTime:time WithTime:((Date *)[veranstaltungenHeute lastObject]).stopTime] == NSOrderedDescending) //Die aktuelle Zeit ist nach dem Ende der letzten heutigen Veranstaltug
+                {
+                    cell.veranstaltungsTitelLabel.text = NSLocalizedString(@"Heute keine Veranstaltungen mehr", @"Heute keine Veranstaltungen mehr");
+                }
+                else
+                {
+                    bool aktuelleVeranstaltung = NO;
+                    for (Date *date in veranstaltungenHeute)
+                    {
+                        if ([self compareTime:time WithTime:date.startTime] != NSOrderedAscending && [self compareTime:time WithTime:date.stopTime] != NSOrderedDescending) //Jetzt gerade ist eine Veranstaltung
+                        {
+                            if (date.dateBlock.room)
+                            {
+                                cell.veranstaltungsTitelLabel.text = [NSString stringWithFormat:@"%@:\n%@, %@: %@", NSLocalizedString(@"Aktuelle Veranstaltung", @"Aktuelle Veranstaltung"), date.dateBlock.lecture.title, NSLocalizedString(@"Raum", @"Raum"), date.dateBlock.room];
+                            }
+                            else
+                            {
+                                cell.veranstaltungsTitelLabel.text = [NSString stringWithFormat:@"%@:\n%@", NSLocalizedString(@"Aktuelle Veranstaltung", @"Aktuelle Veranstaltung"), date.dateBlock.lecture.title];
+                            }
+                            aktuelleVeranstaltung = YES;
+                            break;
+                        }
+                    }
+                    if (!aktuelleVeranstaltung) //Es ist gerade keine aktuelle Veranstaltung, es existiert aber eine Anstehende
+                    {
+                        for (Date *date in veranstaltungenHeute)
+                        {
+                            if ([self compareTime:time WithTime:date.startTime] == NSOrderedAscending)
+                            {
+                                if (date.dateBlock.room)
+                                {
+                                    cell.veranstaltungsTitelLabel.text = [NSString stringWithFormat:@"Nächste Veranstaltung:\n%@ Uhr - %@, %@: %@", date.startTime, date.dateBlock.lecture.title, NSLocalizedString(@"Raum", @"Raum"), date.dateBlock.room];
+                                }
+                                else
+                                {
+                                    cell.veranstaltungsTitelLabel.text = [NSString stringWithFormat:@"Nächste Veranstaltung:\n%@ Uhr - %@", date.startTime, date.dateBlock.lecture.title];
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                }
+            else //Der Nutzer hat heute frei
+            {
+                cell.veranstaltungsTitelLabel.text = NSLocalizedString(@"Heute keine Veranstaltungen", @"Heute keine Veranstaltungen");
+            }
+        }
+        
+        CGRect frame = cell.veranstaltungsTitelLabel.frame;
+        frame.size.height = [cell.veranstaltungsTitelLabel.text sizeWithFont:cell.veranstaltungsTitelLabel.font constrainedToSize:CGSizeMake(262.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height;
+        cell.veranstaltungsTitelLabel.frame = frame;
         
         UISwipeGestureRecognizer *sgrLeft = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(swipedLeft:)];
         sgrLeft.direction = UISwipeGestureRecognizerDirectionLeft;
@@ -233,6 +275,7 @@
     {
         HomeScreenStudiumsplanerCell *cell = [tableView dequeueReusableCellWithIdentifier:@"HomeScreenStudiumsplanerCell"];
         cell.studiumsplanerFunktionLabel.text = NSLocalizedString(@"Studiumsplaner", @"Studiumsplaner");
+        cell.studiumsplanerTitelLabel.textColor = customBlueColor;
         
         UISwipeGestureRecognizer *sgrLeft = [[UISwipeGestureRecognizer alloc] initWithTarget:self action:@selector(swipedLeft:)];
         sgrLeft.direction = UISwipeGestureRecognizerDirectionLeft;
@@ -262,34 +305,112 @@
 
 #pragma mark - UITableViewDelegate
 
+- (NSComparisonResult)compareTime:(NSString *)time1 WithTime:(NSString *)time2
+{
+    int hour1;
+    int hour2;
+    int minute1;
+    int minute2;
+    
+    NSArray *stringArray1 = [time1 componentsSeparatedByString:@":"];
+    NSArray *stringArray2 = [time2 componentsSeparatedByString:@":"];
+    NSString *hourstring1 = [stringArray1 objectAtIndex:0];
+    NSString *hourstring2 = [stringArray2 objectAtIndex:0];
+    if ([[hourstring1 substringToIndex:1] isEqual:@"0"])
+    {
+        hour1 = [[hourstring1 substringFromIndex:1] intValue];
+    }
+    else
+    {
+        hour1 = [hourstring1 intValue];
+    }
+    
+    if ([[hourstring2 substringToIndex:1] isEqual:@"0"])
+    {
+        hour2 = [[hourstring2 substringFromIndex:1] intValue];
+    }
+    else
+    {
+        hour2 = [hourstring2 intValue];
+    }
+    
+    if (hour1 > hour2) //Zeit1 ist später
+    {
+        return NSOrderedDescending;
+    }
+    else if (hour1 == hour2) //Die Stundenkomponenten sind die selben
+    {
+        NSString *minutestring1 = [stringArray1 objectAtIndex:1];
+        NSString *minutestring2 = [stringArray2 objectAtIndex:1];
+        if ([[minutestring1 substringToIndex:1] isEqual:@"0"])
+        {
+            minute1 = [[minutestring1 substringFromIndex:1] intValue];
+        }
+        else
+        {
+            minute1 = [minutestring1 intValue];
+        }
+        if ([[minutestring2 substringToIndex:1] isEqual:@"0"])
+        {
+            minute2 = [[minutestring2 substringFromIndex:1] intValue];
+        }
+        else
+        {
+            minute2 = [minutestring2 intValue];
+        }
+        if (minute1 > minute2) //Zeit1 ist später
+        {
+            return NSOrderedDescending;
+        }
+        else if (minute1 == minute2) //Die Zeiten sind gleich
+        {
+            return NSOrderedSame;
+        }
+        else //Zeit2 ist später
+        {
+            return NSOrderedAscending;
+        }
+    }
+    else //Zeit2 ist später
+    {
+        return NSOrderedAscending;
+    }
+}
+
 - (CGFloat)tableView:(UITableView *)tableView heightForRowAtIndexPath:(NSIndexPath *)indexPath
 {
     //hier dynamisch die Größe der einzelnen Zellen berechnen
     if (indexPath.row == 0) //Essen
     {
         HomeScreenEssenCell *cell = (HomeScreenEssenCell *)[self tableView:self.tableView cellForRowAtIndexPath:indexPath];
-        float origin = 0.0;
-        float height = 0.0;
-        CGRect frame;
-        if (!noNetworkConnection && !noDataToParse && cell.essensBeschreibungsTextView.text.length > 0)
+        CGSize constraintSize = CGSizeMake(262.0, MAXFLOAT);
+        if ([[NSUserDefaults standardUserDefaults] objectForKey:kDEFAULTS_MENSA_NAME])
         {
-//            if (SYSTEM_VERSION_GREATER_THAN_OR_EQUAL_TO(@"7.0")) {
-//                [cell.essensBeschreibungsTextView.layoutManager ensureLayoutForTextContainer:cell.essensBeschreibungsTextView.textContainer];
-//                [cell.essensBeschreibungsTextView layoutIfNeeded];
-//            }
-            
-            height = cell.essensBeschreibungsTextView.contentSize.height;
-            frame = cell.essensBeschreibungsTextView.frame;
-            origin = frame.origin.y;
+            if ([self isWeekDay])
+            {
+                if (foodEntry && !noDataToParse && !noNetworkConnection)
+                {
+                    return cell.essensTypLabel.frame.origin.y + [[NSString stringWithFormat:@"%@ %@:\n%@", NSLocalizedString(@"Heute bei", @"Heute bei"), foodEntry.name, foodEntry.foodDescription] sizeWithFont:cell.essensTypLabel.font constrainedToSize:constraintSize lineBreakMode:NSLineBreakByWordWrapping].height + 15.0;
+                    
+                }
+                else if (noDataToParse)
+                {
+                    return cell.essensTypLabel.frame.origin.y + [NSLocalizedString(@"Momentan liegen keine Daten für das gewählte Essen vor.", @"Momentan liegen keine Daten für das gewählte Essen vor.") sizeWithFont:cell.essensTypLabel.font constrainedToSize:constraintSize lineBreakMode:NSLineBreakByWordWrapping].height + 15.0;
+                }
+                else if (noNetworkConnection)
+                {
+                    return cell.essensTypLabel.frame.origin.y + [NSLocalizedString(@"Verbindungsprobleme. Bitte versuche es später noch mal.", @"Verbindungsprobleme. Bitte versuche es später noch mal.") sizeWithFont:cell.essensTypLabel.font constrainedToSize:constraintSize lineBreakMode:NSLineBreakByWordWrapping].height + 15.0;
+                }
+            }
+            else
+            {
+                return cell.essensTypLabel.frame.origin.y + [NSLocalizedString(@"Alle Mensen haben am Wochenende geschlossen.", @"Alle Mensen haben am Wochenende geschlossen.") sizeWithFont:cell.essensTypLabel.font constrainedToSize:constraintSize lineBreakMode:NSLineBreakByWordWrapping].height + 15.0;
+            }
         }
         else
         {
-            frame = cell.essensTypLabel.frame;
-            origin = frame.origin.y;
-            height = frame.size.height + 5.0;
+            return cell.essensTypLabel.frame.origin.y + [NSLocalizedString(@"Speisepläne der Bremer Mensen", @"Speisepläne der Bremer Mensen") sizeWithFont:cell.essensTypLabel.font constrainedToSize:constraintSize lineBreakMode:NSLineBreakByWordWrapping].height + 15.0;
         }
-        
-        return (origin + height + 10.0);
     }
     else if (indexPath.row == 3) //Campus-Info
     {
@@ -299,14 +420,78 @@
         float height = frame.size.height;
         return (origin + height + 15.0);
     }
-    else if (indexPath.row == 1 || indexPath.row == 2)
+    else if (indexPath.row == 1) //Veranstaltungen
+    {
+        HomeScreenVeranstaltungenCell *cell = (HomeScreenVeranstaltungenCell *)[self tableView:self.tableView cellForRowAtIndexPath:indexPath];
+        if ([[CoreDataDataManager sharedInstance] getAllActiveLectures].count <= 0)
+        {
+            return cell.veranstaltungsTitelLabel.frame.origin.y + [@"Stundenplan & Veranstaltungsverzeichnis" sizeWithFont:[UIFont fontWithName:@"HelveticaNeue-Medium" size:15.0] constrainedToSize:CGSizeMake(262.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height + 15.0;
+        }
+        else
+        {
+            NSArray *veranstaltungenHeute = [[CoreDataDataManager sharedInstance] getAllActiveDatesForDate:[NSDate date]];
+            if (veranstaltungenHeute.count > 0) //Heute hat der Nutzer mindestens eine Veranstaltung
+            {
+                NSCalendar *calendar = [NSCalendar currentCalendar];
+                NSDateComponents *components = [calendar components:(NSHourCalendarUnit | NSMinuteCalendarUnit) fromDate:[NSDate date]];
+                NSInteger hour = [components hour];
+                NSInteger minute = [components minute];
+                NSString *time = [NSString stringWithFormat:@"%i:%i", hour, minute];
+                if ([self compareTime:time WithTime:((Date *)[veranstaltungenHeute lastObject]).stopTime] == NSOrderedDescending) //Die aktuelle Zeit ist nach dem Ende der letzten heutigen Veranstaltug
+                {
+                    return cell.veranstaltungsTitelLabel.frame.origin.y + [@"Heute keine Veranstaltungen mehr" sizeWithFont:[UIFont fontWithName:@"HelveticaNeue-Medium" size:15.0] constrainedToSize:CGSizeMake(262.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height + 15.0;
+                }
+                else
+                {
+                    bool aktuelleVeranstaltung = NO;
+                    for (Date *date in veranstaltungenHeute)
+                    {
+                        if ([self compareTime:time WithTime:date.startTime] != NSOrderedAscending && [self compareTime:time WithTime:date.stopTime] != NSOrderedDescending) //Jetzt gerade ist eine Veranstaltung
+                        {
+                            if (date.dateBlock.room)
+                            {
+                                return cell.veranstaltungsTitelLabel.frame.origin.y + [[NSString stringWithFormat:@"%@:\n%@, %@: %@", NSLocalizedString(@"Aktuelle Veranstaltung", @"Aktuelle Veranstaltung"), date.dateBlock.lecture.title, NSLocalizedString(@"Raum", @"Raum"), date.dateBlock.room] sizeWithFont:[UIFont fontWithName:@"HelveticaNeue-Medium" size:15.0] constrainedToSize:CGSizeMake(262.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height + 15.0;
+                            }
+                            else
+                            {
+                                return cell.veranstaltungsTitelLabel.frame.origin.y + [[NSString stringWithFormat:@"%@:\n%@", NSLocalizedString(@"Aktuelle Veranstaltung", @"Aktuelle Veranstaltung"), date.dateBlock.lecture.title] sizeWithFont:[UIFont fontWithName:@"HelveticaNeue-Medium" size:15.0] constrainedToSize:CGSizeMake(262.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height + 15.0;
+                            }
+                            aktuelleVeranstaltung = YES;
+                            break;
+                        }
+                    }
+                    if (!aktuelleVeranstaltung) //Es ist gerade keine aktuelle Veranstaltung, es existiert aber eine Anstehende
+                    {
+                        for (Date *date in veranstaltungenHeute)
+                        {
+                            if ([self compareTime:time WithTime:date.startTime] == NSOrderedAscending)
+                            {
+                                if (date.dateBlock.room)
+                                {
+                                    return cell.veranstaltungsTitelLabel.frame.origin.y + [[NSString stringWithFormat:@"Nächste Veranstaltung:\n%@ Uhr - %@, %@: %@", date.startTime, date.dateBlock.lecture.title, NSLocalizedString(@"Raum", @"Raum"), date.dateBlock.room] sizeWithFont:[UIFont fontWithName:@"HelveticaNeue-Medium" size:15.0] constrainedToSize:CGSizeMake(262.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height + 15.0;
+                                }
+                                else
+                                {
+                                    return cell.veranstaltungsTitelLabel.frame.origin.y + [[NSString stringWithFormat:@"Nächste Veranstaltung:\n%@ Uhr - %@", date.startTime, date.dateBlock.lecture.title] sizeWithFont:[UIFont fontWithName:@"HelveticaNeue-Medium" size:15.0] constrainedToSize:CGSizeMake(262.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height + 15.0;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+            }
+            else //Der Nutzer hat heute frei
+            {
+                return cell.veranstaltungsTitelLabel.frame.origin.y + [NSLocalizedString(@"Heute keine Veranstaltungen", @"Heute keine Veranstaltungen") sizeWithFont:[UIFont fontWithName:@"HelveticaNeue-Medium" size:15.0] constrainedToSize:CGSizeMake(262.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height + 15.0;
+            }
+        }
+    }
+    else if (indexPath.row == 2) //Studiumsplaner
     {
         return 110.0;
     }
-    else
-    {
-        return 70.0;
-    }
+    return 70.0;
 }
 
 

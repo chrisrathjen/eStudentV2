@@ -18,6 +18,8 @@
 @property (nonatomic,strong)Lecture *veranstaltung; //Die gewählte Veranstaltung, falls keine neue angelegt, sondern eine bestehende bearbeitet werden soll.
 @property (nonatomic,copy)NSString *eintragsArtString; //Die Eintrags-Art der Veranstaltung (Vorlesung, Seminar, etc.).
 @property (nonatomic,copy)NSString *semester; //Das gewählte Semester, in dem die Veranstaltung stattfindet.
+@property (nonatomic,strong)UISwitch *zumStundenplanHinzufuegenSwitch;
+@property (nonatomic)BOOL *inDenStundenplan;
 
 - (void)addDates:(NSArray *)dates ToDateBlock:(TMPDateBlock *)dateBlock;
 - (void)addDateBlock:(TMPDateBlock *)dateBlock;

@@ -85,11 +85,6 @@
 {
     [super viewDidLoad];
     
-    if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-        self.edgesForExtendedLayout = UIRectEdgeNone;
-    }
-
-    
     pageControl.backgroundColor = [UIColor blackColor];
     
     _semesterHeading = [[UIView alloc] initWithFrame:CGRectMake(0.0, 0.0, 320.0, 30.0)];
@@ -351,6 +346,9 @@
                 NSString *semestersString = s.erstesFachsemester.name;
                 while (![semestersString isEqualToString:semester.name])
                 {
+                    if (!semestersString) {
+                        break; //exit if String is nil!!!
+                    }
                     semestersString = [self nextSemesterStringFromSemesterString:semestersString];
                     count++;
                 }
@@ -456,7 +454,6 @@
 //Liefert zu einem Namen eines Semesters den Namen des nachfolgenden Semesters als String.
 - (NSString *)nextSemesterStringFromSemesterString:(NSString *)semesterstring
 {
-    NSLog(@"SemesterString: %@", semesterstring);
     NSMutableString *nextSemester = [NSMutableString string];
     
     NSArray *firstSplit = [semesterstring componentsSeparatedByString:@" "];

@@ -71,7 +71,20 @@
 //Lädt die Daten neu.
 - (void)viewWillAppear:(BOOL)animated
 {
+    [super viewWillAppear:animated];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(keyboardWasShown:)
+                                                 name:UIKeyboardDidShowNotification object:nil];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(keyboardWillBeHidden:)
+                                                 name:UIKeyboardWillHideNotification object:nil];
     [tableView reloadData];
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 //Bereitet das UI vor und lädt die notwendigen Daten über den Datenmanager.
@@ -85,6 +98,10 @@
     
     NSDictionary *dict = [[NSUserDefaults standardUserDefaults] objectForKey:kDEFAULTS_COURSE_OF_STUDY];
     studiengang = studiengang ? studiengang : eintrag ? eintrag.studiengang : [[CoreDataDataManager sharedInstance] getStudiengangForName:[dict objectForKey:kDEFAULTS_COURSE_OF_STUDY_NAME] abschluss:[dict objectForKey:kDEFAULTS_COURSE_OF_STUDY_DEGREE]];
+    if (!studiengang)
+    {
+        studiengang = [[[CoreDataDataManager sharedInstance] getAllStudiengaenge] lastObject];
+    }
     
     benotet = eintrag ? [eintrag.benotet boolValue] : YES;
     bestanden = eintrag ? [eintrag.bestanden boolValue] : NO;
@@ -151,13 +168,6 @@
     {
         semester = [[CoreDataDataManager sharedInstance] getCurrentSemester];
     }
-    
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(keyboardWasShown:)
-                                                 name:UIKeyboardDidShowNotification object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(keyboardWillBeHidden:)
-                                                 name:UIKeyboardWillHideNotification object:nil];
     
     [tableView reloadData];
 }

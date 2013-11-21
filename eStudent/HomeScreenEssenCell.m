@@ -10,6 +10,6 @@
 
 @implementation HomeScreenEssenCell
 
-@synthesize essenFunktionLabel, essensTypLabel, essensBeschreibungsTextView, activitiyIndicator;
+@synthesize essenFunktionLabel, essensTypLabel, activitiyIndicator;
 
 @end

@@ -2,7 +2,7 @@
 //  DateBlock.m
 //  estudent
 //
-//  Created by Christian Rathjen on 22/9/13.
+//  Created by Christian Rathjen on 1/10/13.
 //  Copyright (c) 2013 eStudent. All rights reserved.
 //
 
@@ -19,6 +19,7 @@
 @dynamic startTime;
 @dynamic stopDate;
 @dynamic stopTime;
+@dynamic type;
 @dynamic dates;
 @dynamic lecture;
 

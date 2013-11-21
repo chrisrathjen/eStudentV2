@@ -15,6 +15,7 @@
                              startDate:(NSDate *)startDate
                               stopDate:(NSDate *)stopDate
                         repeatModifier:(NSNumber *)modifier
+                                  type:(NSString *)type
                                lecture:(Lecture *)aLecture
                       inManagedContext:(NSManagedObjectContext *)context
 
@@ -28,6 +29,7 @@
     aDateBlock.stopDate = stopDate;
     aDateBlock.repeatModifier = modifier;
     aDateBlock.lecture = aLecture;
+    aDateBlock.type = type;
     return aDateBlock;
 }
 @end

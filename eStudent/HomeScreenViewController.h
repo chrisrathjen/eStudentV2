@@ -25,5 +25,6 @@
 //Prüft ob der aktuelle tag ein Wochentag ist.
 - (BOOL)isWeekDay;
 - (void)refreshMensaData;
+- (void)refreshLectureLiveTile;
 
 @end

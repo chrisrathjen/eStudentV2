@@ -123,7 +123,10 @@
     cell.backgroundColor = [UIColor clearColor];
     cell.selectionStyle = UITableViewCellSelectionStyleNone;
     
-    [[cell.contentView.subviews lastObject] removeFromSuperview];
+    for (UIView *view in cell.contentView.subviews)
+    {
+        [view removeFromSuperview];
+    }
 
     Date *date;
     if (_indexPathToSetOrEditNote)
@@ -212,17 +215,29 @@
     frame.size.height = 21.0;
     [view addSubview:lectureTitle];
     
-    UILabel *roomLabel = [[UILabel alloc] initWithFrame:frame];
-    roomLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:14.0];
-    roomLabel.backgroundColor = [UIColor clearColor];
-    //roomLabel.textColor = [UIColor grayColor];
-    roomLabel.text = [NSString stringWithFormat:@"%@", date.dateBlock.room];
-    roomLabel.numberOfLines = 0;
-    roomLabel.lineBreakMode = NSLineBreakByWordWrapping;
-    frame = roomLabel.frame;
-    frame.size.height = [roomLabel.text sizeWithFont:roomLabel.font constrainedToSize:CGSizeMake(260.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height;
-    roomLabel.frame = frame;
-    [view addSubview:roomLabel];
+    UILabel *roomLabel;
+    if (date.dateBlock.room)
+    {
+        roomLabel = [[UILabel alloc] initWithFrame:frame];
+        roomLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:14.0];
+        roomLabel.backgroundColor = [UIColor clearColor];
+        //roomLabel.textColor = [UIColor grayColor];
+        if (date.dateBlock.type)
+        {
+            roomLabel.text = [NSString stringWithFormat:@"%@, %@", date.dateBlock.type, date.dateBlock.room];
+        }
+        else
+        {
+            roomLabel.text = [NSString stringWithFormat:@"%@", date.dateBlock.room];
+        }
+        roomLabel.numberOfLines = 0;
+        roomLabel.lineBreakMode = NSLineBreakByWordWrapping;
+        frame = roomLabel.frame;
+        frame.size.height = [roomLabel.text sizeWithFont:roomLabel.font constrainedToSize:CGSizeMake(260.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height;
+        roomLabel.frame = frame;
+        [view addSubview:roomLabel];
+    }
+    
     
     BOOL dateIsNow = [self dateIsNow:date];
     if (dateIsNow)
@@ -239,14 +254,15 @@
     
     if (date.note)
     {
+        frame = roomLabel ? roomLabel.frame : lectureTitle.frame;
         frame.origin.y += frame.size.height + 10.0;
         frame.size.height = 1.0;
         UIView *lineView = [[UIView alloc] initWithFrame:frame];
         lineView.backgroundColor = kCUSTOM_BLUE_COLOR;
         [view addSubview:lineView];
         
-        frame = roomLabel.frame;
-        frame.origin.y += frame.size.height + 15.0;
+        frame = lineView.frame;
+        frame.origin.y += frame.size.height + 5.0;
         
         UILabel *noteLabel = [[UILabel alloc] initWithFrame:frame];
         noteLabel.text = [NSString stringWithFormat:@"%@", date.note];
@@ -290,7 +306,7 @@
         UIImageView *tapIndicator = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"tapIndicator"]];
         frame = tapIndicator.frame;
         frame.origin.x = view.frame.size.width/2.0 - frame.size.width/2.0;
-        frame.origin.y = roomLabel.frame.size.height + roomLabel.frame.origin.y + 5.0;
+        frame.origin.y = roomLabel ? roomLabel.frame.size.height + roomLabel.frame.origin.y + 5.0 :lectureTitle.frame.size.height + lectureTitle.frame.origin.y + 5.0;
         tapIndicator.frame = frame;
         if (_indexPathToSetOrEditNote && _indexPathToSetOrEditNote.row-1 == indexPath.row)
         {
@@ -361,14 +377,25 @@
     frame.origin.y = frame.size.height + frame.origin.y + 10.0;
     frame.size.height = 21.0;
     
-    UILabel *roomLabel = [[UILabel alloc] initWithFrame:frame];
-    roomLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:14.0];
-    roomLabel.text = [NSString stringWithFormat:@"%@", date.dateBlock.room];
-    roomLabel.numberOfLines = 0;
-    roomLabel.lineBreakMode = NSLineBreakByWordWrapping;
-    frame = roomLabel.frame;
-    frame.size.height = [roomLabel.text sizeWithFont:roomLabel.font constrainedToSize:CGSizeMake(260.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height;
-    roomLabel.frame = frame;
+    UILabel *roomLabel;
+    if (date.dateBlock.room)
+    {
+        roomLabel = [[UILabel alloc] initWithFrame:frame];
+        roomLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:14.0];
+        if (date.dateBlock.type)
+        {
+            roomLabel.text = [NSString stringWithFormat:@"%@, %@", date.dateBlock.type, date.dateBlock.room];
+        }
+        else
+        {
+            roomLabel.text = [NSString stringWithFormat:@"%@", date.dateBlock.room];
+        }
+        roomLabel.numberOfLines = 0;
+        roomLabel.lineBreakMode = NSLineBreakByWordWrapping;
+        frame = roomLabel.frame;
+        frame.size.height = [roomLabel.text sizeWithFont:roomLabel.font constrainedToSize:CGSizeMake(260.0, MAXFLOAT) lineBreakMode:NSLineBreakByWordWrapping].height;
+        roomLabel.frame = frame;
+    }
     
     float paddingBottom = 0.0;
     if (indexPath.row == 0 || indexPath.row == _dates.count-1)
@@ -378,7 +405,8 @@
     
     if (date.note)
     {
-        frame.origin.y += frame.size.height + 15.0;
+        frame.origin.y = roomLabel ? roomLabel.frame.origin.y + roomLabel.frame.size.height + 15.0 : lectureTitle.frame.origin.y + lectureTitle.frame.size.height + 15.0;
+        //frame.origin.y += frame.size.height + 15.0;
         UILabel *noteLabel = [[UILabel alloc] initWithFrame:frame];
         noteLabel.text = [NSString stringWithFormat:@"%@", date.note]; //hier dann date.note eintragen
         noteLabel.font = [UIFont fontWithName:@"HelveticaNeue" size:14.0];
@@ -390,7 +418,11 @@
         return frame.size.height + frame.origin.y + 10.0 + paddingBottom + [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"tapIndicator"]].frame.size.height + 7.5;
     }
     
-    return roomLabel.frame.size.height + roomLabel.frame.origin.y + 10.0 + paddingBottom + [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"tapIndicator"]].frame.size.height + 7.5;
+    if (roomLabel)
+    {
+        return roomLabel.frame.size.height + roomLabel.frame.origin.y + 10.0 + paddingBottom + [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"tapIndicator"]].frame.size.height + 7.5;
+    }
+    return lectureTitle.frame.size.height + lectureTitle.frame.origin.y + 10.0 + paddingBottom + [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"tapIndicator"]].frame.size.height + 7.5;
 }
 
 //Tippt der Nutzer auf einen Termin, fährt ein Notizzettel herunter. Hier kann er eine Notiz anlegen/bearbeiten.
@@ -520,9 +552,8 @@
 //Prüft, ob ein Termin gerade jetzt in diesem Moment ist. Falls ja, wird dieser blau eingefärbt um dies zu signalisieren.
 - (BOOL)dateIsNow:(Date *)date
 {
-    NSDateComponents *componentsOfDate = [[NSCalendar currentCalendar] components:NSDayCalendarUnit | NSMonthCalendarUnit | NSYearCalendarUnit fromDate:date.date];
     NSDateComponents *componentsOfToday = [[NSCalendar currentCalendar] components:NSDayCalendarUnit | NSMonthCalendarUnit | NSYearCalendarUnit | NSHourCalendarUnit | NSMinuteCalendarUnit fromDate:[NSDate date]];
-    if ([componentsOfDate day] == [componentsOfToday day] && [componentsOfDate month] == [componentsOfToday month] && [componentsOfDate year] == [componentsOfToday year]) //Ist der uebergebene Termin heute?
+    if ([date.day integerValue] == [componentsOfToday day] && [date.month integerValue] == [componentsOfToday month] && [date.year integerValue] == [componentsOfToday year]) //Ist der uebergebene Termin heute?
     {
         NSString *currentTime = [NSString stringWithFormat:@"%i:%i", [componentsOfToday hour], [componentsOfToday minute]]; //Erstellt einen Uhrzeit-String vom aktuellen Datum im 'HH:mm' Format
         

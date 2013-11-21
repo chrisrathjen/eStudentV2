@@ -14,6 +14,7 @@
 @interface CoreDataDataManager() 
 //FetchRequest/DateFormatter werden wieder verwendet da sie sehr oft gebraucht werden
 @property (nonatomic, strong) NSDateFormatter *aDateFormatter;
+@property (nonatomic, strong) NSDateFormatter *aDateComponentFormatter;
 @property (nonatomic, strong) NSFetchRequest *courseFetchRequest;
 @property (nonatomic, strong) NSFetchRequest *lectureFetchRequest;
 @property (nonatomic, strong) NSFetchRequest *lecturerFetchRequest;
@@ -157,6 +158,49 @@
         [self deleteEintrag:anEintrag];
     }
     [self.document.managedObjectContext deleteObject:studiengang];
+    [self saveDatabase];
+    //DeletSemesters
+    if ([self getAllStudiengaenge].count > 0) {
+        //There is at least one other. Do not delete all Semesters
+        for (Semester *aSemester in [self getAllSemesters]) {
+            if (![self SemesterisInActiveStudiengang:aSemester]) {
+                [self deleteSemester:aSemester];
+            }
+        }
+        [self deleteAllEmptyFutureSemestersAfterIndex:[[self getAllSemesters] indexOfObject:[self getCurrentSemester]]];
+    } else {
+        //Delete all semesters
+        for (Semester *aSemester in [self getAllSemesters]) {
+            [self deleteSemester:aSemester];
+        }
+    }
+    [self saveDatabase];
+}
+
+- (BOOL)SemesterisInActiveStudiengang:(Semester *)aSemester
+{
+    NSArray *allSemesters = [self getAllSemesters];
+    NSArray *allStudiengaenge = [self getAllStudiengaenge];
+    int semesterIndex = [allSemesters indexOfObject:aSemester];
+    for (Studiengang *aStudiengang in allStudiengaenge) {
+        if ([aSemester isEqual:aSemester.ersteFachSemester] || [aSemester isEqual:aStudiengang.letztesFachsemester]) {
+            return YES;
+        }
+        int startIndex = [allSemesters indexOfObject:aStudiengang.erstesFachsemester];
+        int stopIndex = [allSemesters indexOfObject:aStudiengang.letztesFachsemester];
+        if (startIndex > semesterIndex) {
+            continue; //Studiengang beginnt in einem spaeteren Semester
+        }
+        if (startIndex <= semesterIndex) {
+            if (stopIndex != NSIntegerMax && semesterIndex <= stopIndex) {
+                return YES; //Es gibt einletztes Fachsemester und das aktuelle Semester liegt innerhalb des Studiengangs
+            }
+            if (stopIndex == NSIntegerMax) {
+                return YES;
+            }
+        }
+    }
+    return NO;
 }
 
 - (void)deleteKriterium:(Kriterium *)kriterium
@@ -242,11 +286,29 @@
         aStudiengang.erstesFachsemester = aSemester;
         if ([self getAllStudiengaenge].count == 1) {
             //There is only one Studiengang, old Semesters can be Deleted
-            for (Semester *oldSemester in oldSemestersWithEintrag) {
-                [self deleteSemester:oldSemester];
+            for (Semester *aTempSemester in oldSemestersWithEintrag) {
+                [self deleteSemester:aTempSemester];
             }
         } else {
-#warning Hier noch korrekt aufraeumen
+            NSArray *allStudiengaenge = [self getAllStudiengaenge];
+            //Gibt es einen Anderen Studiengang mit einem ersten Fachsemester das <= dem alten erstenSemester ist
+            for (Studiengang *aTempStudiengang in allStudiengaenge) {
+                if ([allSemesters indexOfObject:aTempStudiengang.erstesFachsemester] < indexOldFirstSemester) {
+                    return;
+                }
+            }
+            //Gibt es einen Studiengang dessen erstes Fachsemester zwischen dem alten und neuen ersten Fachsemester liegt
+            for (Semester *aTempSemester in oldSemestersWithEintrag) {
+                BOOL delete = YES;
+                for (Studiengang *aTempStudiengang in allStudiengaenge) {
+                    if ([allSemesters indexOfObject:aTempStudiengang.erstesFachsemester] <= [allSemesters indexOfObject:aTempSemester]) {
+                        delete = NO;
+                    }
+                }
+                if (delete) {
+                    [self deleteSemester:aTempSemester];
+                }
+            }
         }
     } else {
         aStudiengang.erstesFachsemester = aSemester;
@@ -307,7 +369,7 @@
 - (NSArray *)getAllStudiengaenge
 {
     NSFetchRequest *request = [NSFetchRequest fetchRequestWithEntityName:@"Studiengang"];
-    request.sortDescriptors = [NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"name" ascending:YES]];
+    request.sortDescriptors = [NSArray arrayWithObjects:[NSSortDescriptor sortDescriptorWithKey:@"name" ascending:YES],[NSSortDescriptor sortDescriptorWithKey:@"abschluss" ascending:YES],nil];
     NSError *error = nil;
     NSArray *results = [self.document.managedObjectContext executeFetchRequest:request error:&error];
     if ([results count] > 0)
@@ -891,6 +953,10 @@
 
 #pragma mark - Parse Vorlesungsverzeichnis
 
+- (Term *)existingTermWithTitle:(NSString *)title
+{
+    return [self existingTermWithTitle:title inContext:self.document.managedObjectContext];
+}
 - (Term *)existingTermWithTitle:(NSString *)title inContext:(NSManagedObjectContext *)aContext
 {
     NSPredicate *termPredicate = [NSPredicate predicateWithFormat:@"title LIKE %@",title];
@@ -917,9 +983,11 @@
 
 - (void)addDatesToDateBlock:(DateBlock *)aDateBlock inContext:(NSManagedObjectContext *)aContext
 {
+    Date *aDate = nil;
     switch ([aDateBlock.repeatModifier intValue]) {
         case 0: //Single Date
-            [Date createDateWithDateBlock:aDateBlock date:aDateBlock.startDate startTime:aDateBlock.startTime stopTime:aDateBlock.stopTime active:NO forLecture:aDateBlock.lecture inManagedContext:aContext];
+            aDate = [Date createDateWithDateBlock:aDateBlock dateComps:[self getDateComponentsFromDate:aDateBlock.startDate] startTime:aDateBlock.startTime stopTime:aDateBlock.stopTime active:NO forLecture:aDateBlock.lecture inManagedContext:aContext];
+            NSLog(@"Date Created at: %@.%@.%@", aDate.day, aDate.month, aDate.year);
             break;
         case 1: // Weekly Date
         {
@@ -929,7 +997,7 @@
             NSCalendar *theCalendar = [NSCalendar currentCalendar];
             while ([[tempDate laterDate:aDateBlock.stopDate] isEqual:aDateBlock.stopDate]) {
                 //create Date based on temp date
-                [Date createDateWithDateBlock:aDateBlock date:tempDate startTime:aDateBlock.startTime stopTime:aDateBlock.stopTime active:NO forLecture:aDateBlock.lecture inManagedContext:aContext];
+                [Date createDateWithDateBlock:aDateBlock dateComps:[self getDateComponentsFromDate:tempDate] startTime:aDateBlock.startTime stopTime:aDateBlock.stopTime active:NO forLecture:aDateBlock.lecture inManagedContext:aContext];
                 //increase tempdate
                 tempDate = [theCalendar dateByAddingComponents:weekComponent toDate:tempDate options:0];
             }
@@ -943,7 +1011,7 @@
             NSCalendar *theCalendar = [NSCalendar currentCalendar];
             while ([[tempDate laterDate:aDateBlock.stopDate] isEqual:aDateBlock.stopDate]) {
                 //create Date based on temp date
-                [Date createDateWithDateBlock:aDateBlock date:tempDate startTime:aDateBlock.startTime stopTime:aDateBlock.stopTime active:NO forLecture:aDateBlock.lecture inManagedContext:aContext];
+                [Date createDateWithDateBlock:aDateBlock dateComps:[self getDateComponentsFromDate:tempDate] startTime:aDateBlock.startTime stopTime:aDateBlock.stopTime active:NO forLecture:aDateBlock.lecture inManagedContext:aContext];
                 //increase tempdate
                 tempDate = [theCalendar dateByAddingComponents:weekComponent toDate:tempDate options:0];
             }
@@ -1020,7 +1088,7 @@
                 }
             }
             
-            DateBlock *aDateBlock = [DateBlock createDateBlockWithRoom:[aDateBlockDict objectForKey:kDateBlockRoom] startTime:[aDateBlockDict objectForKey:kDateBlockStartTime] stopTime:[aDateBlockDict objectForKey:kDateBlockStopTime] startDate:startDate stopDate:stopDate repeatModifier:[NSNumber numberWithInt:[[aDateBlockDict objectForKey:kDateBlockRepeat] intValue]] lecture:aLecture inManagedContext:aContext];
+            DateBlock *aDateBlock = [DateBlock createDateBlockWithRoom:[aDateBlockDict objectForKey:kDateBlockRoom] startTime:[aDateBlockDict objectForKey:kDateBlockStartTime] stopTime:[aDateBlockDict objectForKey:kDateBlockStopTime] startDate:startDate stopDate:stopDate repeatModifier:[NSNumber numberWithInt:[[aDateBlockDict objectForKey:kDateBlockRepeat] intValue]] type:[aDateBlockDict objectForKey:kDateBlockType] lecture:aLecture inManagedContext:aContext];
             [self addDatesToDateBlock:aDateBlock inContext:aContext];
             [aLecture addDateBlocksObject:aDateBlock];
         }
@@ -1212,7 +1280,7 @@
     NSDictionary *data = [NSJSONSerialization JSONObjectWithData:semesterData options:kNilOptions error:&parsingError];
     NSString *updateString = [data objectForKey:kAllSemestersUpdateKey];
     NSString *oldUpdateString = [defaults objectForKey:kAllSemestersUpdateKey];
-    if ([oldUpdateString isEqualToString:updateString] && kDEBUG == 0) {
+    if ([oldUpdateString isEqualToString:updateString] && kDEBUG == 0 && [[self getAllTermsFromCoreData] count] > 0) {
         NSLog(@"SKIPPING: No new Data");
         return;
     } else {
@@ -1256,14 +1324,17 @@
                         [Course createCourseWithTitle:[aCourseDict objectForKey:kTermFileName] url:[aCourseDict objectForKey:kTermFileURL] inTerm:existingTerm inManagedContext:aContext];
                     }
                 }
+                NSLog(@"Updated Term: %@ now contains: %i courses", existingTerm.title, existingTerm.courses.count);
             } else {
                 //NewTerm
                 Term *aTerm = [self createTermFormURL:[NSURL URLWithString:[[aNewTermDict objectForKey:kSemesterURL] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]] inContext:aContext];
                 NSLog(@"Added new Term %@", aTerm.title);
             }
         }
-        [defaults setObject:updateString forKey:kAllSemestersUpdateKey];
-        [defaults synchronize];
+        if ([[self getAllTermsFromCoreData] count] > 0) {
+            [defaults setObject:updateString forKey:kAllSemestersUpdateKey];
+            [defaults synchronize];
+        }
         [self saveDatabase];
     }
 }
@@ -1296,7 +1367,7 @@
     if (!self.courseFetchRequest) {
         self.courseFetchRequest = [NSFetchRequest fetchRequestWithEntityName:@"Course"];
     }
-    if (!aTerm || aCourseTitle) {
+    if (!aTerm || !aCourseTitle) {
         return nil;
     }
     self.courseFetchRequest.predicate = [NSPredicate predicateWithFormat:@"title LIKE %@ AND semester.title LIKE %@", aCourseTitle, aTerm.title];
@@ -1427,8 +1498,8 @@
 {
     if (!self.lecturerFetchRequest) {
         self.lecturerFetchRequest = [[NSFetchRequest alloc] initWithEntityName:@"Lecturer"];
-        self.lecturerFetchRequest.predicate = [NSPredicate predicateWithFormat:@"title LIKE %@", aTitle];
     }
+    self.lecturerFetchRequest.predicate = [NSPredicate predicateWithFormat:@"title LIKE %@", aTitle];
     NSArray *lecturerArray = [aContext executeFetchRequest:self.lecturerFetchRequest error:nil];
     if ([lecturerArray count] > 0) {
         return [lecturerArray lastObject];
@@ -1440,7 +1511,8 @@
 - (void)updateLectureresForLecture:(Lecture *)aLecture withLecturerArray:(NSArray *)aLecturerArray inContext:(NSManagedObjectContext *)aContex
 {
     for (NSString *aLecturerName in aLecturerArray) {
-        Lecturer *aLecturer = [self searchForExistingLecturerWithTitle:aLecturerName inContext:aContex];
+        Lecturer *aLecturer = nil;
+        aLecturer = [self searchForExistingLecturerWithTitle:aLecturerName inContext:aContex];
         if (aLecturer) { // Es gibt den Dozenten aber er ist nicht dem Kurs zugeordnet
             if (![aLecturer.lectures containsObject:aLecture]) {
                 [aLecturer addLecturesObject:aLecture];
@@ -1504,7 +1576,13 @@
     //create DateBlock for TMPDateBlocks
     [self addDateBlockToLecture:aLecture fromTMPDateBlocks:tmpDateBlocks];
     [self addLecturerToLecture:aLecture fromArray:lecturerArray inContext:self.document.managedObjectContext];
-
+    
+    if (inSchedule) {
+        for (Date *aDate in aLecture.dates) {
+            aDate.active = [NSNumber numberWithBool:YES];
+        }
+    }
+    
     [self saveDatabase];
     return aLecture;
 }
@@ -1512,10 +1590,10 @@
 - (void)addDateBlockToLecture:(Lecture *)aLecture fromTMPDateBlocks:(NSArray *)tmpDateBlocks
 {
     for (TMPDateBlock *aTMPDateBlock in tmpDateBlocks) {
-        [DateBlock createDateBlockWithRoom:aTMPDateBlock.room startTime:aTMPDateBlock.startTime stopTime:aTMPDateBlock.stopTime startDate:aTMPDateBlock.startDate stopDate:aTMPDateBlock.stopDate repeatModifier:aTMPDateBlock.repeatModifier lecture:aLecture inManagedContext:self.document.managedObjectContext];
+        DateBlock *aDateBlock = [DateBlock createDateBlockWithRoom:aTMPDateBlock.room startTime:aTMPDateBlock.startTime stopTime:aTMPDateBlock.stopTime startDate:[self normalizeDate:aTMPDateBlock.startDate] stopDate:[self normalizeDate:aTMPDateBlock.stopDate] repeatModifier:aTMPDateBlock.repeatModifier type:nil lecture:aLecture inManagedContext:self.document.managedObjectContext];
+        [self addDatesToDateBlock:aDateBlock inContext:self.document.managedObjectContext];
     }
         //merge DateBlocks
-    [self mergeDateBlocksInLecture:aLecture inContext:self.document.managedObjectContext];
 }
 
 - (NSArray *)getTMPDateBlocksForLecture:(Lecture *)aLecture
@@ -1526,6 +1604,7 @@
         [tmpDateBlocks addObject:aTMPDateBlock];
         
     }
+    [tmpDateBlocks sortUsingDescriptors:[NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"startDate" ascending:YES]]];
     return [tmpDateBlocks copy];
 }
 
@@ -1534,13 +1613,14 @@
     NSMutableArray *tmpDates = [NSMutableArray arrayWithCapacity:datesArray.count];
     for (Date *aDate in datesArray) {
         TMPDate *aTMPDate = [[TMPDate alloc] init];
-        aTMPDate.date = aDate.date;
+        aTMPDate.date = [self dateWithString:[NSString stringWithFormat:@"%@.%@.%@", aDate.day, aDate.month, aDate.year]];
         aTMPDate.startTime = aDate.startTime;
         aTMPDate.stopTime = aDate.stopTime;
         aTMPDate.note = aDate.note;
         aTMPDate.active = aDate.active;
         [tmpDates addObject:aTMPDate];
     }
+    [tmpDates sortUsingDescriptors:[NSArray arrayWithObject:[NSSortDescriptor sortDescriptorWithKey:@"date" ascending:YES]]];
     return [tmpDates copy];
 }
 
@@ -1574,6 +1654,12 @@
     }
     //create DateBlock for TMPDateBlocks
     [self addDateBlockToLecture:aLecture fromTMPDateBlocks:tmpDateBlocks];
+    
+    if (inSchedule) {
+        for (Date *aDate in aLecture.dates) {
+            aDate.active = [NSNumber numberWithBool:YES];
+        }
+    }
     
     [self saveDatabase];
     return aLecture;
@@ -1625,25 +1711,28 @@
                            
                            return NSOrderedAscending;
                        }];
-#warning remove empty Terms (even with user created stuff)
-    NSMutableArray *filteredResult = [result mutableCopy];
-    for (Term *aTerm in result) {
-        if (aTerm.courses.count == 0) {
-            [filteredResult removeObject:aTerm];
-        } else if (aTerm.courses.count == 1) {
-            Course *aCourse = [aTerm.courses anyObject];
-            if ([aCourse.title isEqualToString:kUserCreatedCourse]) {
-                [filteredResult removeObject:aTerm];
-            }
-        }
-    }
-    return [filteredResult copy];
+//    NSMutableArray *filteredResult = [result mutableCopy];
+//    for (Term *aTerm in result) {
+//        if (aTerm.courses.count == 0) {
+//            [filteredResult removeObject:aTerm];
+//        } else if (aTerm.courses.count == 1) {
+//            Course *aCourse = [aTerm.courses anyObject];
+//            if ([aCourse.title isEqualToString:kUserCreatedCourse]) {
+//                [filteredResult removeObject:aTerm];
+//            }
+//        }
+//    }
+    return [result copy];
 }
 
 - (Term *)currentTerm //In der Vorlseungszeit wird das aktuelle Semester zurück gegeben. In der Vorlesungsfreien Zeit wenn vorhanden das naechste. Sonst das aktuelle.
 {
     NSDate *aCurrentDate = [NSDate date];
     NSArray *allTerms = [self getAllTermsFromCoreData];
+    if ([allTerms count] == 0) {
+        [self updateSemesters];
+        allTerms = [self getAllTermsFromCoreData];
+    }
     for (int i = 0; i < [allTerms count]; i++) {
         Term *aTerm = [allTerms objectAtIndex:i];
         Term *nextTerm;
@@ -1673,15 +1762,34 @@
     return [self dateWithString:[self.aDateFormatter stringFromDate:aDate]];
 }
 
+- (NSDictionary *)getDateComponentsFromDate:(NSDate *)aDate
+{
+    if (!self.aDateComponentFormatter) {
+        self.aDateComponentFormatter = [[NSDateFormatter alloc] init];
+        self.aDateComponentFormatter.calendar = [NSCalendar currentCalendar];
+        self.aDateComponentFormatter.timeZone = [NSTimeZone systemTimeZone];
+    }
+    [self.aDateComponentFormatter setDateFormat:@"dd"];
+    NSString *day = [self.aDateComponentFormatter stringFromDate:aDate];
+    [self.aDateComponentFormatter setDateFormat:@"MM"];
+    NSString *month = [self.aDateComponentFormatter stringFromDate:aDate];
+    [self.aDateComponentFormatter setDateFormat:@"yyyy"];
+    NSString *year = [self.aDateComponentFormatter stringFromDate:aDate];
+    return [NSDictionary dictionaryWithObjectsAndKeys:day, kDateDay, month, kDateMonth, year, kDateYear, nil];
+}
+
+- (NSDate *)getDateFromDateComponents:(NSDictionary *)dateComps
+{
+    return [self dateWithString:[NSString stringWithFormat:@"%@.%@.%@", [dateComps objectForKey:kDateDay], [dateComps objectForKey:kDateMonth], [dateComps objectForKey:kDateYear]]];
+}
+
 - (NSArray *)getAllActiveDatesForDate:(NSDate *)aDate
 {
     NSFetchRequest *datesFetchRequest = [NSFetchRequest fetchRequestWithEntityName:@"Date"];
-    datesFetchRequest.predicate = [NSPredicate predicateWithFormat:@"date == %@ AND active == YES", [self normalizeDate:aDate]];
+    NSDictionary *dateComps = [self getDateComponentsFromDate:aDate];
+    datesFetchRequest.predicate = [NSPredicate predicateWithFormat:@"day LIKE %@ AND month LIKE %@ AND year LIKE %@ AND active == YES", [dateComps objectForKey:kDateDay], [dateComps objectForKey:kDateMonth], [dateComps objectForKey:kDateYear]];
     datesFetchRequest.sortDescriptors = [NSArray arrayWithObjects:[NSSortDescriptor sortDescriptorWithKey:@"startTime" ascending:YES], [NSSortDescriptor sortDescriptorWithKey:@"lecture.title" ascending:YES],nil];
     NSArray *stuff = [self.document.managedObjectContext executeFetchRequest:datesFetchRequest error:nil];
-    for (Date *aDateTest in stuff) {
-        NSLog(@"%@ %@ bis %@",[self getLocalizedWeekDayForDate:aDateTest.date], aDateTest.startTime, aDateTest.stopTime);
-    }
     return stuff;
 }
 
@@ -1694,15 +1802,8 @@
 
 - (Date *)createDateObjectWithDate:(NSDate *)date startTime:(NSString *)startTime stopTime:(NSString *)stopTime isActive:(BOOL)active inLecture:(Lecture *)aLecture inManagedContext:(NSManagedObjectContext *)moc
 {
-    return [Date createDateWithDateBlock:nil date:date startTime:startTime stopTime:stopTime active:active forLecture:aLecture inManagedContext:moc];
+    return [Date createDateWithDateBlock:nil dateComps:[self getDateComponentsFromDate:date] startTime:startTime stopTime:stopTime active:active forLecture:aLecture inManagedContext:moc];
     
-}
-
-- (DateBlock *)createDateBlockWithStartDate:(NSDate *)startDate stopDate:(NSDate *)stopDate startTime:(NSString *)startTime stopTime:(NSString *)stopTime repeatModifier:(int)modifier room:(NSString *)room inLecture:(Lecture *)aLecture inContext:(NSManagedObjectContext *)moc
-{
-    DateBlock *aDateBlock = [DateBlock createDateBlockWithRoom:room startTime:startTime stopTime:stopTime startDate:startDate stopDate:stopDate repeatModifier:[NSNumber numberWithInt:modifier] lecture:aLecture inManagedContext:moc];
-    [self addDatesToDateBlock:aDateBlock inContext:moc];
-    return aDateBlock;
 }
 
 - (NSArray *)getSortedArrayForSet:(NSSet *)aSet byKey:(NSString *)aKey
@@ -1725,7 +1826,7 @@
                     callback(success, [self getSortedArrayForSet:aCourse.lectures byKey:@"title"]);
                     NSLog(@"callback send");
                 } else {
-                    
+                    callback(NO, [NSArray array]);
                 }
             });
         });
@@ -1774,7 +1875,8 @@
 - (NSArray *)getDateBlocksForLecture:(Lecture *)aLecture
 {
     if ([aLecture.dateBlocks count] > 0) {
-        return [self sortedDateArrayFromSet:aLecture.dateBlocks byKey:@"startDate"];
+        NSArray *sortDescriptors = [NSArray arrayWithObjects:[NSSortDescriptor sortDescriptorWithKey:@"startDate" ascending:YES], [NSSortDescriptor sortDescriptorWithKey:@"startTime" ascending:YES], nil];
+        return [aLecture.dateBlocks sortedArrayUsingDescriptors:sortDescriptors];
     }
     return [NSArray array];
 }

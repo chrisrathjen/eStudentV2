@@ -116,19 +116,9 @@
 {
     [super viewDidLoad];
     
-    if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-        self.edgesForExtendedLayout = UIRectEdgeNone;
-    }
-    
     _searchBar.tintColor = kCUSTOM_BLUE_COLOR;
     _searchBar.placeholder = NSLocalizedString(@"Veranstaltung suchen", @"Veranstaltung suchen");
     self.view.backgroundColor = kCUSTOM_BACKGROUND_PATTERN_COLOR;
-}
-
-- (void)didReceiveMemoryWarning
-{
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
 }
 
 #pragma mark - Table view data source

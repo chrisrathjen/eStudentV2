@@ -13,7 +13,6 @@
 
 @property (weak, nonatomic) IBOutlet UILabel *veranstaltungenFunktionLabel;
 @property (weak, nonatomic) IBOutlet UILabel *veranstaltungsTitelLabel;
-@property (weak, nonatomic) IBOutlet UITextView *veranstaltungsBeschreibungsTextView;
 @property (weak, nonatomic) IBOutlet UIImageView *veranstaltungsImage;
 
 

@@ -13,7 +13,6 @@
 
 @property (weak, nonatomic) IBOutlet UILabel *essenFunktionLabel;
 @property (weak, nonatomic) IBOutlet UILabel *essensTypLabel;
-@property (weak, nonatomic) IBOutlet UITextView *essensBeschreibungsTextView;
 @property (weak, nonatomic) IBOutlet UIActivityIndicatorView *activitiyIndicator;
 
 @end

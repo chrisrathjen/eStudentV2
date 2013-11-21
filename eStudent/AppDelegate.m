@@ -52,7 +52,10 @@
     [self.window makeKeyAndVisible];
     
     [CoreDataDataManager sharedInstance]; //Not needed in Version 2.0
-    [self resetCachedData];
+    NSDate *lastRequestDate = [[NSUserDefaults standardUserDefaults] objectForKey:kLastSemesterDataSync];
+    if ([lastRequestDate timeIntervalSinceNow] < kTimeIntervalFourWeek || !lastRequestDate || kDEBUG) {
+        [[CoreDataDataManager sharedInstance] updateSemesters];
+    }
     
     return YES;
 }
@@ -76,6 +79,7 @@
 - (void)applicationDidBecomeActive:(UIApplication *)application
 {
     [hsvc refreshMensaData];
+    [hsvc refreshLectureLiveTile];
 //    if ([[ESRemindersDataManager sharedInstance] remindersAccessible]) {
 //        if ([[ESRemindersDataManager sharedInstance] remindersInUse]) {
 //            [[ESRemindersDataManager sharedInstance] syncronizeAllLinkedReminders];

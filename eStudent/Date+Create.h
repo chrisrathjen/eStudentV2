@@ -10,7 +10,7 @@
 
 @interface Date (Create)
 + (Date *)createDateWithDateBlock:(DateBlock *)aDateBlock
-                             date:(NSDate *)date
+                        dateComps:(NSDictionary *)dateComps
                         startTime:(NSString *)startTime
                          stopTime:(NSString *)stopTime
                            active:(BOOL)active

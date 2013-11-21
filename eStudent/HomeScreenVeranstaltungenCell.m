@@ -10,6 +10,6 @@
 
 @implementation HomeScreenVeranstaltungenCell
 
-@synthesize veranstaltungsTitelLabel, veranstaltungenFunktionLabel, veranstaltungsBeschreibungsTextView, veranstaltungsImage;
+@synthesize veranstaltungsTitelLabel, veranstaltungenFunktionLabel, veranstaltungsImage;
 
 @end

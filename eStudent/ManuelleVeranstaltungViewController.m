@@ -16,6 +16,7 @@
 #import "DateBlockViewController.h"
 #import "TMPDateBlock.h"
 #import "TMPDate.h"
+#import <QuartzCore/QuartzCore.h>
 
 @interface ManuelleVeranstaltungViewController ()
 {
@@ -26,7 +27,6 @@
     BOOL _imStudiumsplaner;
     BOOL _imStundenplan;
     int _numberOfSectionsInTableView;
-    UISwitch *_zumStundenplanHinzufuegenSwitch;
     UISwitch *_zumStudiumsplanerHinzufuegenSwitch;
     Studiengang *_selectedStudiengang;
     NSString *_veranstaltungsTitel;
@@ -36,6 +36,7 @@
     BOOL _shouldInsertNewDozent;
     UIButton *_deleteEintragButton;
     CAGradientLayer *_gradient;
+    NSMutableString *_dozentText;
 }
 
 - (void)cancel:(id)sender;
@@ -54,6 +55,8 @@
 @synthesize veranstaltung =_veranstaltung;
 @synthesize eintragsArtString = _eintragsArtString;
 @synthesize semester = _semester;
+@synthesize zumStundenplanHinzufuegenSwitch = _zumStundenplanHinzufuegenSwitch;
+@synthesize inDenStundenplan = _inDenStundenplan;
 
 - (void)setSemester:(NSString *)semester
 {
@@ -79,8 +82,26 @@
 //Lädt die Eingabemaske neu.
 - (void)viewWillAppear:(BOOL)animated
 {
+    [super viewWillAppear:animated];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(keyboardWasShown:)
+                                                 name:UIKeyboardDidShowNotification object:self];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(keyboardWillBeHidden:)
+                                                 name:UIKeyboardWillHideNotification object:self];
     _numberOfSectionsInTableView = (_studiengaenge.count > 0 || _dateBlocks.count > 0) ? 4 : 3;
+    if (_inDenStundenplan)
+    {
+        _inDenStundenplan = NO;
+        _imStundenplan = YES;
+    }
     [self.tableView reloadData];
+}
+
+- (void)viewWillDisappear:(BOOL)animated
+{
+    [super viewWillDisappear:animated];
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
 }
 
 //Lädt die für die Eingabemaske benötigten Daten.
@@ -89,10 +110,6 @@
     [super viewDidLoad];
 
     self.navigationItem.leftBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Abbrechen", @"Abbrechen") style:UIBarButtonItemStyleBordered target:self action:@selector(cancel:)];
-    
-        if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-            self.edgesForExtendedLayout = UIRectEdgeNone;
-        }
     
     self.tableView.backgroundView = nil;
     self.tableView.backgroundColor = kCUSTOM_BACKGROUND_PATTERN_COLOR;
@@ -105,6 +122,23 @@
         _createButton = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Speichern", @"Speichern") style:UIBarButtonItemStyleBordered target:self action:@selector(createLecture:)];
         _eintragsArtString = _veranstaltung.type;
         _semester = _veranstaltung.course.semester.title;
+        
+        if (_studiengaenge) //Muss kontrolliert werden, wenn das Semester festgelegt wurde
+        {
+            NSMutableArray *studiengaengeToShow = [NSMutableArray array];
+            for (int i = 0; i < _studiengaenge.count; i++)
+            {
+                Studiengang *studiengang = [_studiengaenge objectAtIndex:i];
+                NSComparisonResult comparisonResult = [self compareSemesterString:_semester withSemesterString:studiengang.erstesFachsemester.name];
+                if (comparisonResult == NSOrderedSame || comparisonResult == NSOrderedDescending)
+                {
+                    [studiengaengeToShow addObject:studiengang];
+                }
+            }
+            _studiengaenge = nil;
+            _studiengaenge = studiengaengeToShow.copy;
+        }
+        
         _veranstaltungsTitel = _veranstaltung.title;
         _veranstaltungsVAK = _veranstaltung.vak;
         _veranstaltungsCP = [_veranstaltung.cp stringValue];
@@ -164,13 +198,6 @@
     _numberOfSectionsInTableView = (_studiengaenge.count > 0 || _dateBlocks.count > 0) ? 4 : 3;
     
     self.navigationItem.rightBarButtonItem = _createButton;
-    
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(keyboardWasShown:)
-                                                 name:UIKeyboardDidShowNotification object:nil];
-    [[NSNotificationCenter defaultCenter] addObserver:self
-                                             selector:@selector(keyboardWillBeHidden:)
-                                                 name:UIKeyboardWillHideNotification object:nil];
 }
 
 - (void)dealloc
@@ -191,8 +218,11 @@
 {
     if (_veranstaltung)
     {
+        if (_dozentText.length > 0)
+        {
+            [_dozenten addObject:_dozentText];
+        }
         _veranstaltung = [[CoreDataDataManager sharedInstance] updateUserCreatedLecture:_veranstaltung title:_veranstaltungsTitel type:_eintragsArtString cp:[NSNumber numberWithInt:[_veranstaltungsCP intValue]] vak:_veranstaltungsVAK isInSchedule:_imStundenplan tmpDateBlocks:_dateBlocks lecturer:_dozenten inSemester:_semester];
-        NSLog(@"semester: %@", _veranstaltung.course.semester.title);
         if (_imStudiumsplaner)
         {
             if (!(_veranstaltung.eintrag))
@@ -207,6 +237,7 @@
                         if ([s.name isEqualToString:_semester])
                         {
                             semester = s;
+                            break;
                         }
                     }
                     [[CoreDataDataManager sharedInstance] copyLecture:_veranstaltung intoStudiengang:_selectedStudiengang inSemester:semester];
@@ -236,6 +267,7 @@
                     if ([s.name isEqualToString:_semester])
                     {
                         semester = s;
+                        break;
                     }
                 }
                 _veranstaltung.eintrag.semester = semester;
@@ -269,6 +301,10 @@
     }
     else
     {
+        if (_dozentText.length > 0)
+        {
+            [_dozenten addObject:_dozentText];
+        }
         Lecture *lecture = [[CoreDataDataManager sharedInstance] createUserCreatedLectureWithTitle:_veranstaltungsTitel type:_eintragsArtString cp:[NSNumber numberWithInt:[_veranstaltungsCP intValue]] vak:_veranstaltungsVAK isInSchedule:_imStundenplan tmpDateBlocks:_dateBlocks lecturer:_dozenten inSemester:_semester.copy];
         
         if (_imStudiumsplaner)
@@ -878,7 +914,7 @@
             }
             [self.tableView beginUpdates];
             [self.tableView insertRowsAtIndexPaths:indexPaths withRowAnimation:UITableViewRowAnimationTop];
-            [self.tableView scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:2 inSection:3] atScrollPosition:UITableViewScrollPositionTop animated:YES];
+            [self.tableView scrollToNearestSelectedRowAtScrollPosition:UITableViewScrollPositionBottom animated:YES];
             [self.tableView endUpdates];
         }
     }
@@ -952,6 +988,7 @@
         {
             [_dozenten addObject:textField.text];
             _shouldInsertNewDozent = NO;
+            _dozentText = nil;
             [self.tableView beginUpdates];
             [self.tableView reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:_dozenten.count-1 inSection:1]] withRowAnimation:UITableViewRowAnimationAutomatic];
             [self.tableView endUpdates];
@@ -959,6 +996,7 @@
         else
         {
             _shouldInsertNewDozent = NO;
+            _dozentText = nil;
             [self.tableView beginUpdates];
             [self.tableView deleteRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:_dozenten.count inSection:1]] withRowAnimation:UITableViewRowAnimationBottom];
             [self.tableView endUpdates];
@@ -1002,6 +1040,10 @@
         {
             _veranstaltungsCP = textfield.text;
         }
+    }
+    else if (indexPath.section == 1)
+    {
+        _dozentText = textfield.text.mutableCopy;
     }
 }
 

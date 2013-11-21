@@ -27,6 +27,7 @@
     NSMutableDictionary *_sortedCoursesToDisplay;
     FPPopoverController *_popoverController;
     ChangeSemesterViewController *_csvc;
+    UIView *_emptyState;
 }
 
 - (void)changeSemester:(id)sender;
@@ -53,53 +54,82 @@
     }
 }
 
-
+- (void)viewDidAppear:(BOOL)animated
+{
+    [super viewDidAppear:animated];
+    
+    if (!_chosenSemester)
+    {
+        Term *currentTerm = [[CoreDataDataManager sharedInstance] currentTerm];
+        if (currentTerm)
+        {
+            if (_searchbar.hidden)
+            {
+                _searchbar.hidden = NO;
+            }
+            if ([self.view.subviews containsObject:_emptyState])
+            {
+                [_emptyState removeFromSuperview];
+            }
+            _chosenSemester = currentTerm;
+            [self loadCoursesforTerm:currentTerm];
+            
+            self.tabBarController.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:currentTerm.title style:UIBarButtonItemStyleBordered target:self action:@selector(changeSemester:)];
+            if ([[CoreDataDataManager sharedInstance] getAllTermsFromCoreData].count > 1)
+            {
+                self.tabBarController.navigationItem.rightBarButtonItem.enabled = YES;
+            }
+            else
+            {
+                self.tabBarController.navigationItem.rightBarButtonItem.enabled = NO;
+            }
+        }
+        else
+        {
+            _searchbar.hidden = YES;
+            self.view.backgroundColor = kCUSTOM_BACKGROUND_PATTERN_COLOR;
+            _tableView.backgroundColor = kCUSTOM_BACKGROUND_PATTERN_COLOR;
+            _tableView.backgroundView = nil;
+            _tableView.separatorStyle = UITableViewCellSeparatorStyleNone;
+            _sectionHeaderToDisplay = nil;
+            _sortedCoursesToDisplay = nil;
+            [_tableView reloadData];
+            
+            if (!_emptyState)
+            {
+                CGRect frame = self.view.frame;
+                _emptyState = [[UIView alloc] initWithFrame:frame];
+                UIImageView *emptySemester = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"studiumsplaner-empty"]];
+                frame = emptySemester.frame;
+                frame.origin.x = (_emptyState.frame.size.width / 2.0) - (frame.size.width / 2.0);
+                frame.origin.y = (_emptyState.frame.size.height / 2.0) - (frame.size.height);
+                emptySemester.frame = frame;
+                [_emptyState addSubview:emptySemester];
+                
+                UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(30.0, frame.origin.y + frame.size.height + 10.0, 260.0, 150.0)];
+                textView.text = NSLocalizedString(@"Die Studiengänge konnten nicht geladen werden. Versuche es später noch einmal.", @"Die Studiengänge konnten nicht geladen werden. Versuche es später noch einmal.");
+                textView.scrollEnabled = NO;
+                textView.editable = NO;
+                textView.textAlignment = NSTextAlignmentCenter;
+                textView.font = [UIFont fontWithName:@"HelveticaNeue" size:18.0];
+                textView.textColor = [UIColor colorWithRed:.75 green:.75 blue:.75 alpha:1.0];
+                textView.backgroundColor = [UIColor clearColor];
+                [_emptyState addSubview:textView];
+            }
+            [self.view addSubview:_emptyState];
+        }
+    }
+}
 
 - (void)viewDidLoad
 {
     [super viewDidLoad];
-    if ([self respondsToSelector:@selector(edgesForExtendedLayout)]) {
-        self.edgesForExtendedLayout = UIRectEdgeNone;
-    }
-
     
     self.navigationController.navigationBar.tintColor = kCUSTOM_BLUE_COLOR;
     self.tabBarController.navigationItem.backBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Studiengänge", @"Studiengänge") style:UIBarButtonItemStylePlain target:nil action:nil];
     
     _searchbar.tintColor = kCUSTOM_BLUE_COLOR;
     _searchbar.placeholder = NSLocalizedString(@"Studiengang suchen", @"Studiengang suchen");
-    //self.tabBarController.navigationItem.backBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Studieng., Semester", @"Zurück") style:UIBarButtonItemStylePlain target:nil action:nil];
-    //self.tabBarController.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:NSLocalizedString(@"Fertig", @"Fertig") style:UIBarButtonItemStyleBordered target:self action:@selector(cancel:)];
-#warning Sollte eigentlich in ViewDidAppear. Dort haengt sich aber die UI auf ????
-    NSDate *lastRequestDate = [[NSUserDefaults standardUserDefaults] objectForKey:kLastSemesterDataSync];
-    if ([lastRequestDate timeIntervalSinceNow] < kTimeIntervalFourWeek || !lastRequestDate || kDEBUG) {
-        [SVProgressHUD showWithStatus:NSLocalizedString(@"Datenbank aktualisieren", @"updateing Database")];
-        [[CoreDataDataManager sharedInstance] updateSemesters];
-        [[NSUserDefaults standardUserDefaults] setObject:[NSDate date] forKey:kLastSemesterDataSync];
-        [[NSUserDefaults standardUserDefaults] synchronize];
-        [SVProgressHUD dismiss];
-    }
-    
-    Term *currentTerm = [[CoreDataDataManager sharedInstance] currentTerm];
-    if (currentTerm)
-    {
-        _chosenSemester = currentTerm;
-        [self loadCoursesforTerm:currentTerm];
-        
-        self.tabBarController.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithTitle:currentTerm.title style:UIBarButtonItemStyleBordered target:self action:@selector(changeSemester:)];
-        if ([[CoreDataDataManager sharedInstance] getAllTermsFromCoreData].count > 1)
-        {
-            self.tabBarController.navigationItem.rightBarButtonItem.enabled = YES;
-        }
-        else
-        {
-            self.tabBarController.navigationItem.rightBarButtonItem.enabled = NO;
-        }
-    }
-    else
-    {
-#warning Die GUI muss anzeigen, wenn kein currentTerm in der Datenbank ist.
-    }
 }
 
 
@@ -164,12 +194,6 @@
     _sortedCoursesToDisplay = _sortedCourses.copy;
     
     [_tableView reloadData];
-}
-
-- (void)didReceiveMemoryWarning
-{
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
 }
 
 #pragma mark - Table view data source
@@ -308,7 +332,7 @@
     }
     
     _csvc.chosenTerm = _chosenSemester;
-    [_csvc.tableView reloadData];
+    [_csvc updateData];
     
     UIView* btnView = [sender valueForKey:@"view"];
     [_popoverController presentPopoverFromView:btnView];
